@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Aangan design tokens — taken directly from the brand guideline.
+
+   Primary    Terracotta       #c86840
+              Sage Green       #6d7552
+   Secondary  Dark Mustard     #7a4900   notifications, badges, active states
+              Courtyard Cream  #f8f1e3   primary backgrounds, cards
+              Sandstone        #d8c39f   secondary backgrounds, dividers, borders
+              Charcoal         #333433   body text, navigation, footer
+
+   Type       Titles  ITC Souvenir
+              Body    ITC Avant Garde Gothic
+   Both are licensed fonts. If you have them, drop the webfonts into
+   /public/fonts and add @font-face blocks below — the stacks already name them
+   first. Until then the free stand-ins load from Google Fonts: Fraunces (a soft
+   serif close to Souvenir) and Poppins (geometric sans close to Avant Garde).
+--------------------------------------------------------------------------- */
+
+@theme {
+  --color-terracotta:      #c86840;
+  --color-terracotta-deep: #a34f2d;
+  --color-terracotta-tint: #f6e5db;
+
+  --color-sage:            #6d7552;
+  --color-sage-deep:       #545b3e;
+  --color-sage-tint:       #e8ebe0;
+
+  --color-mustard:         #7a4900;
+  --color-mustard-bright:  #d9a326;
+  --color-mustard-tint:    #f7ecd4;
+
+  --color-cream:           #f8f1e3;
+  --color-cream-deep:      #f2e8d6;
+  --color-sandstone:       #d8c39f;
+  --color-sandstone-soft:  #e8dcc4;
+  --color-charcoal:        #333433;
+  --color-charcoal-soft:   #5e5f5c;
+  --color-charcoal-faint:  #8b8c88;
+
+  --color-surface:         #fffdf9;
+
+  --font-display: "ITC Souvenir", "Souvenir", Fraunces, Georgia, "Times New Roman", serif;
+  --font-body: "ITC Avant Garde Gothic", "Century Gothic", Poppins, ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 16px;
+}
+
+/* ---- base ---- */
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-body);
+  font-size: 15px;               /* Body 15pt in the hierarchy */
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--font-display);
+  font-weight: 500;              /* Souvenir Medium */
+  letter-spacing: -0.01em;
+  color: var(--color-mustard);
+}
+
+/* Souvenir Light for headings, per the hierarchy sheet */
+h2, h3 { font-weight: 400; }
+
+.section-header {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-charcoal-faint);
+}
+
+::selection { background: var(--color-terracotta-tint); }
+
+*:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbar-free horizontal rails */
+.no-bar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-bar::-webkit-scrollbar { display: none; }
+
+@keyframes pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(200,104,64,.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(200,104,64,0); }
+  100% { box-shadow: 0 0 0 0 rgba(200,104,64,0); }
+}
+.pulse { animation: pulse-dot 2s infinite; }
