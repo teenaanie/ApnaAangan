@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { leadEmail, sendMail } from "@/lib/email";
+import { rupees } from "@/lib/brand";
 
 export type BookingState = { error?: string };
 
@@ -47,7 +48,10 @@ export async function createBooking(
 
   if (error) return { error: error.message };
 
-  const res = result as { ok: boolean; ref?: string; error?: string; blocked?: boolean };
+  const res = result as {
+    ok: boolean; ref?: string; error?: string; blocked?: boolean;
+    quoted_fee_paise?: number; free?: boolean;
+  };
   if (!res?.ok) return { error: res?.error ?? "Could not send that request." };
   const ref = res.ref!;
 
@@ -59,17 +63,21 @@ export async function createBooking(
 
   if (to) {
     const site = process.env.NEXT_PUBLIC_SITE_URL || "";
+    const fee = Number(res.quoted_fee_paise ?? 2000);
     await sendMail({
       to,
-      subject: `New booking request ${ref} · Aangan`,
+      subject: `New request ${ref} — ${name} · Aangan`,
       html: leadEmail({
         providerName: "there",
         ref: String(ref),
         message,
         residentName: name,
-        residentPhone: phone,
         when: when || null,
-        url: `${site}/provider`,
+        // Straight to the section holding the Accept button, not the top of a
+        // dashboard they then have to scroll.
+        url: `${site}/provider#requests`,
+        fee: rupees(fee),
+        free: Boolean(res.free),
       }),
     });
   }

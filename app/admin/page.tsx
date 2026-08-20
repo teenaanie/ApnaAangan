@@ -5,6 +5,7 @@ import { Badge, Button, Card, Empty, SectionHeader, Shell, Stat } from "@/compon
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { rupees } from "@/lib/brand";
+import { waLink, waProviderNudge } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -33,7 +34,7 @@ export default async function AdminPage() {
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
       .eq("status", "pending").order("created_at").limit(30),
-    supabase.from("leads").select("ref, message, status, charge_paise, created_at, resident_name, resident_phone, is_guest, providers(public_id)")
+    supabase.from("leads").select("ref, message, status, charge_paise, created_at, resident_name, resident_phone, is_guest, providers(public_id, display_name, provider_contacts(phone))")
       .order("created_at", { ascending: false }).limit(15),
     supabase.from("providers").select("status, leads_total, leads_accepted, balance_paise"),
   ]);
@@ -93,8 +94,12 @@ export default async function AdminPage() {
   const recentLeads = (leadsRes.data ?? []) as unknown as Array<{
     ref: string; message: string; status: string; charge_paise: number;
     resident_name: string; resident_phone: string; is_guest: boolean;
-    providers: { public_id: string } | null;
+    providers: {
+      public_id: string; display_name: string;
+      provider_contacts: { phone: string }[] | { phone: string } | null;
+    } | null;
   }>;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
 
   const all = statsRes.data ?? [];
   const active = all.filter((p) => p.status === "active").length;
@@ -352,6 +357,26 @@ export default async function AdminPage() {
                     </p>
                   </div>
                   {l.is_guest && <Badge>guest</Badge>}
+                  {l.status === "new" && providerPhone(l.providers) && (
+                    <a
+                      href={waLink(
+                        providerPhone(l.providers)!,
+                        waProviderNudge({
+                          providerName: l.providers?.display_name ?? "there",
+                          ref: l.ref,
+                          residentName: l.resident_name,
+                          message: l.message,
+                          url: `${siteUrl}/provider#requests`,
+                        })
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open WhatsApp with a nudge ready to send"
+                      className="shrink-0 text-[11.5px] font-bold px-2 py-1 rounded-full border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
+                    >
+                      Nudge
+                    </a>
+                  )}
                   <Badge tone={l.status === "accepted" ? "sage" : l.status === "new" ? "mustard" : "neutral"}>
                     {l.status}
                   </Badge>
@@ -397,4 +422,14 @@ function RejectedCard({
       </form>
     </Card>
   );
+}
+
+/** Supabase returns an embedded one-to-many as an array; tolerate both shapes. */
+function providerPhone(
+  p: { provider_contacts: { phone: string }[] | { phone: string } | null } | null
+): string | null {
+  const c = p?.provider_contacts;
+  if (!c) return null;
+  const row = Array.isArray(c) ? c[0] : c;
+  return row?.phone ?? null;
 }

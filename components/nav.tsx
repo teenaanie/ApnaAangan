@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackLink from "@/components/back-link";
 import { Logo } from "@/components/ui";
 import { getMyProvider, getProfile } from "@/lib/data";
 
@@ -18,6 +19,7 @@ export default async function Nav({ subtitle }: { subtitle?: string }) {
     <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-sandstone-soft">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
         <Logo subtitle={subtitle} />
+        <BackLink />
         <div className="flex-1" />
 
         {/* Residents get the FAQ; providers and admins get the rate card.
