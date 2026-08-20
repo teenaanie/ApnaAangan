@@ -112,3 +112,96 @@ export async function resolveBlockedAttempt(formData: FormData) {
   await supabase.rpc("resolve_blocked_attempt", { p_id: id, p_action: action });
   revalidatePath("/admin");
 }
+
+/* --------------------------------------------------------------- lifecycle */
+
+/**
+ * Suspend, reinstate, or reopen a provider.
+ *
+ * Deliberately separate from moderateProvider: that one decides on a NEW
+ * provider and cascades to their first listing. This one acts on someone
+ * already in the directory, and must not silently republish listings they
+ * had rejected, or resurrect a listing they closed themselves.
+ */
+export async function setProviderStatus(formData: FormData) {
+  const id = String(formData.get("id") || "");
+  const status = String(formData.get("status") || "");
+  const note = String(formData.get("note") || "").trim();
+  if (!id || !["active", "suspended", "closed"].includes(status)) return;
+
+  const supabase = await assertAdmin();
+  await supabase
+    .from("providers")
+    .update({
+      status,
+      status_changed_at: new Date().toISOString(),
+      status_note: note || (status === "suspended" ? "Suspended by an administrator" : null),
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/admin");
+  revalidatePath("/");
+}
+
+/** Raise or lower how much a provider may owe before accepting is blocked. */
+export async function setCreditLimit(formData: FormData) {
+  const id = String(formData.get("id") || "");
+  const rupeesValue = Number(formData.get("limit_rupees") || 0);
+  if (!id || !Number.isFinite(rupeesValue) || rupeesValue < 0) return;
+
+  const supabase = await assertAdmin();
+  await supabase
+    .from("providers")
+    .update({ credit_limit_paise: Math.round(rupeesValue * 100) })
+    .eq("id", id);
+
+  revalidatePath("/admin/providers");
+}
+
+/* ------------------------------------------------------------- settlements */
+
+export type SettleState = { error?: string; ok?: string };
+
+/**
+ * Record money that changed hands offline.
+ *
+ * Billing is postpaid and settled by UPI outside the app, so the ledger has to
+ * be told. record_settlement() writes the receipt and adjusts the balance in
+ * one transaction — otherwise a crash between the two leaves a provider either
+ * paying twice or never.
+ */
+export async function recordSettlement(
+  _prev: SettleState,
+  formData: FormData
+): Promise<SettleState> {
+  const providerId = String(formData.get("provider_id") || "");
+  const amount = Number(formData.get("amount_rupees") || 0);
+  const method = String(formData.get("method") || "upi");
+  const reference = String(formData.get("reference") || "").trim();
+  const note = String(formData.get("note") || "").trim();
+
+  if (!providerId) return { error: "Which provider?" };
+  if (!Number.isFinite(amount) || amount <= 0)
+    return { error: "Enter the amount received, in rupees." };
+
+  const supabase = await assertAdmin();
+  const { data, error } = await supabase.rpc("record_settlement", {
+    p_provider_id: providerId,
+    p_amount_paise: Math.round(amount * 100),
+    p_method: method,
+    p_reference: reference || null,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string; balance_paise?: number };
+  if (!res?.ok) return { error: res?.error ?? "Could not record that." };
+
+  revalidatePath("/admin/providers");
+  return {
+    ok: `Recorded ₹${amount.toLocaleString("en-IN")}. Outstanding is now ₹${(
+      (res.balance_paise ?? 0) / 100
+    ).toLocaleString("en-IN")}.`,
+  };
+}

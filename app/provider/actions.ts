@@ -84,10 +84,18 @@ export async function respondToLead(formData: FormData) {
   if (!leadId || !["accepted", "declined"].includes(decision)) return;
 
   const supabase = await createClient();
-  await supabase
+  const { error } = await supabase
     .from("leads")
     .update({ status: decision, responded_at: new Date().toISOString() })
     .eq("id", leadId);
+
+  // The credit limit is enforced by a database trigger, so it surfaces here as
+  // an error rather than a return value. Swallowing it would leave the provider
+  // tapping Accept and watching nothing happen.
+  if (error) {
+    revalidatePath("/provider");
+    redirect(`/provider?err=${encodeURIComponent(error.message)}#requests`);
+  }
 
   revalidatePath("/provider");
 }
@@ -177,4 +185,47 @@ export async function postUpdate(
 
   revalidatePath("/provider");
   return { ok: "Posted. It appears once it clears moderation." };
+}
+
+/* ------------------------------------------------------- availability & money */
+
+/**
+ * Pause, resume, or close your own listing.
+ *
+ * The database decides what is permitted (set_my_availability), not this
+ * function — a suspended provider must not be able to reactivate themselves,
+ * and that rule belongs somewhere it cannot be skipped by calling the API
+ * directly.
+ */
+export async function setAvailability(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const status = String(formData.get("status") || "");
+  const note = String(formData.get("note") || "").trim();
+
+  if (status === "closed" && formData.get("confirm_close") !== "on")
+    return { error: "Tick the box to confirm you want to close your listing." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_my_availability", {
+    p_status: status,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string };
+  if (!res?.ok) return { error: res?.error ?? "Could not change that." };
+
+  revalidatePath("/provider");
+  revalidatePath("/");
+
+  return {
+    ok:
+      status === "paused"
+        ? "Your listing is paused. Neighbours can't see it or send requests until you resume."
+        : status === "closed"
+        ? "Your listing is closed. Contact an administrator if you want it back."
+        : "You're live again.",
+  };
 }

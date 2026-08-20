@@ -28,6 +28,8 @@ export type Provider = {
   verified_id: boolean;
   free_leads_remaining: number;
   balance_paise: number;
+  credit_limit_paise: number;
+  status_note: string | null;
   leads_total: number;
   leads_accepted: number;
 };

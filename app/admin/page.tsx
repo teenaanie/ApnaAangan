@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
@@ -22,14 +23,14 @@ export default async function AdminPage() {
     // The listings come along so the one decision is an informed one — you are
     // approving a person AND what they propose to sell, in a single look.
     supabase.from("providers")
-      .select("id, public_id, display_name, about, status, created_at, listings(id, title, description, status)")
+      .select("id, public_id, display_name, about, status, created_at, listings(id, title, description, status), provider_contacts(phone)")
       .eq("status", "pending").order("created_at"),
     // !inner + the status filter keeps a new provider out of BOTH queues at
     // once. Their first listing rides along with the decision about them
     // (see moderateProvider); this section is for listings added later, by
     // someone already in the directory.
     supabase.from("listings")
-      .select("id, title, description, status, providers!inner(public_id, display_name, status)")
+      .select("id, title, description, status, providers!inner(public_id, display_name, status, provider_contacts(phone))")
       .eq("status", "pending").eq("providers.status", "active")
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
@@ -67,6 +68,28 @@ export default async function AdminPage() {
   }>;
   const rejectedCount = rejProviders.length + rejListings.length + rejUpdates.length;
 
+  // Unanswered requests, oldest first. This is a worklist, not a log — the one
+  // that has been sitting longest is the one costing a resident their evening,
+  // so it goes at the top rather than scrolling off the bottom.
+  const { data: waitingRows } = await supabase
+    .from("leads")
+    .select(
+      "id, ref, message, created_at, resident_name, requested_time, quoted_fee_paise, " +
+        "providers(public_id, display_name, status, provider_contacts(phone))"
+    )
+    .eq("status", "new")
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  const waiting = (waitingRows ?? []) as unknown as Array<{
+    id: string; ref: string; message: string; created_at: string;
+    resident_name: string; requested_time: string | null; quoted_fee_paise: number | null;
+    providers: {
+      public_id: string; display_name: string; status: string;
+      provider_contacts: { phone: string }[] | { phone: string } | null;
+    } | null;
+  }>;
+
   const { data: blockedRows } = await supabase
     .from("blocked_attempts")
     .select("id, phone, message, reason, status, created_at, providers(public_id, display_name)")
@@ -82,10 +105,14 @@ export default async function AdminPage() {
   const pendingProviders = (providersRes.data ?? []) as unknown as Array<{
     id: string; public_id: string; display_name: string; about: string | null;
     listings: Array<{ id: string; title: string; description: string | null; status: string }> | null;
+    provider_contacts: { phone: string }[] | { phone: string } | null;
   }>;
   const pendingListings = (listingsRes.data ?? []) as unknown as Array<{
     id: string; title: string; description: string | null;
-    providers: { public_id: string; display_name: string } | null;
+    providers: {
+      public_id: string; display_name: string;
+      provider_contacts: { phone: string }[] | { phone: string } | null;
+    } | null;
   }>;
   const pendingUpdates = (updatesRes.data ?? []) as unknown as Array<{
     id: string; headline: string; detail: string | null; kind: string;
@@ -114,7 +141,16 @@ export default async function AdminPage() {
       <Nav subtitle="Admin" />
       <Shell>
         <div className="py-9">
-          <h1 className="text-[27px] mb-1">Admin</h1>
+          <div className="flex flex-wrap items-start gap-3">
+            <h1 className="text-[27px] mb-1">Admin</h1>
+            <div className="flex-1" />
+            <Link
+              href="/admin/providers"
+              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+            >
+              All providers, by society →
+            </Link>
+          </div>
           <p className="text-charcoal-soft text-sm mb-6">
             With no committee in the loop, moderation is entirely yours. Review every
             listing for the first few months — it is tedious and it is the only thing
@@ -128,9 +164,95 @@ export default async function AdminPage() {
               <Stat value={totalLeads} label="requests sent" />
               <Stat value={accepted} label="accepted" />
               <Stat value={rupees(owed)} label="accrued, uncollected" />
+              <Stat value={waiting.length} label="waiting on a provider" />
               <Stat value={blocked.length} label="blocked, needs a decision" />
             </div>
           </Card>
+
+          {/* ------------------------------------------------ nudge worklist */}
+          <SectionHeader>Waiting on a provider · {waiting.length}</SectionHeader>
+          {waiting.length === 0 ? (
+            <Empty title="Nothing outstanding">
+              Every request has been accepted or declined. This is what a healthy
+              week looks like.
+            </Empty>
+          ) : (
+            <div className="grid gap-3 mb-9">
+              {waiting.map((w) => {
+                const hours = hoursSince(w.created_at);
+                const phone = providerPhone(w.providers);
+                const stale = hours >= 12;
+                return (
+                  <Card
+                    key={w.id}
+                    className={`p-4 flex flex-wrap items-start gap-3 ${
+                      stale ? "border-mustard/40 bg-mustard-tint/30" : ""
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-[15px] m-0">
+                          {w.providers?.display_name ?? "Unknown provider"}
+                        </p>
+                        <Badge tone={stale ? "mustard" : "neutral"}>{waitedLabel(hours)}</Badge>
+                        {w.providers?.status !== "active" && (
+                          <Badge tone="mustard">provider is {w.providers?.status}</Badge>
+                        )}
+                        {!phone && <Badge>no phone on file</Badge>}
+                      </div>
+                      <p className="text-[12px] text-charcoal-faint font-mono mt-0.5">
+                        {w.ref} · {w.providers?.public_id}
+                      </p>
+                      <p className="text-[13.5px] leading-snug mt-1.5 m-0">
+                        {w.resident_name} asked: “{w.message}”
+                      </p>
+                      {w.requested_time && (
+                        <p className="text-[12px] text-charcoal-soft mt-1">
+                          Wanted for {w.requested_time}
+                        </p>
+                      )}
+                    </div>
+
+                    {phone ? (
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <a
+                          href={waLink(
+                            phone,
+                            waProviderNudge({
+                              providerName: w.providers?.display_name ?? "there",
+                              ref: w.ref,
+                              residentName: w.resident_name,
+                              message: w.message,
+                              url: `${siteUrl}/provider#requests`,
+                            })
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-sage text-white hover:bg-sage-deep transition"
+                        >
+                          Remind on WhatsApp
+                        </a>
+                        <a
+                          href={`tel:${phone}`}
+                          className="inline-flex items-center rounded-full px-3.5 py-2 text-[13px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta transition"
+                        >
+                          Call
+                        </a>
+                      </div>
+                    ) : (
+                      <p className="text-[12px] text-charcoal-faint max-w-[180px]">
+                        No number stored, so there is no way to reach them from here.
+                      </p>
+                    )}
+                  </Card>
+                );
+              })}
+              <p className="text-[11.5px] text-charcoal-faint">
+                Highlighted after 12 hours. The message opens in WhatsApp already
+                written — you press send.
+              </p>
+            </div>
+          )}
 
           <SectionHeader>Providers awaiting approval · {pendingProviders.length}</SectionHeader>
           {pendingProviders.length === 0 ? (
@@ -159,6 +281,12 @@ export default async function AdminPage() {
                         )}
                       </div>
                     ))}
+
+                    <ContactRow
+                      phone={providerPhone(p)}
+                      name={p.display_name}
+                      context="about your listing on Aangan"
+                    />
 
                     <p className="text-[11.5px] text-charcoal-faint mt-2.5">
                       Approving publishes this provider and the listing
@@ -195,6 +323,11 @@ export default async function AdminPage() {
                     <p className="text-[12px] text-charcoal-faint mt-0.5">
                       {l.providers?.display_name} · {l.providers?.public_id}
                     </p>
+                    <ContactRow
+                      phone={providerPhone(l.providers)}
+                      name={l.providers?.display_name ?? "there"}
+                      context="about the listing you just added on Aangan"
+                    />
                     {l.description && (
                       <p className="text-[13px] text-charcoal-soft mt-1.5">{l.description}</p>
                     )}
@@ -432,4 +565,44 @@ function providerPhone(
   if (!c) return null;
   const row = Array.isArray(c) ? c[0] : c;
   return row?.phone ?? null;
+}
+
+/** WhatsApp and call, wherever an admin is looking at a provider's work. */
+function ContactRow({
+  phone, name, context,
+}: {
+  phone: string | null;
+  name: string;
+  context: string;
+}) {
+  if (!phone) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mt-2.5">
+      <a
+        href={waLink(phone, `Hello ${name}, this is Aangan — ${context}. `)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
+      >
+        WhatsApp
+      </a>
+      <a
+        href={`tel:${phone}`}
+        className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta transition"
+      >
+        {phone}
+      </a>
+    </div>
+  );
+}
+
+function hoursSince(iso: string): number {
+  return Math.max(0, (Date.now() - new Date(iso).getTime()) / 36e5);
+}
+
+function waitedLabel(hours: number): string {
+  if (hours < 1) return "just now";
+  if (hours < 24) return `waiting ${Math.floor(hours)}h`;
+  const days = Math.floor(hours / 24);
+  return `waiting ${days} day${days === 1 ? "" : "s"}`;
 }

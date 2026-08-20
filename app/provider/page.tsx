@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { respondToLead } from "./actions";
 import UpdateComposer from "./update-composer";
+import Availability from "./availability";
 import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getMyProvider, isConfigured } from "@/lib/data";
@@ -16,7 +17,7 @@ export const metadata = { title: "Your dashboard" };
 export default async function ProviderDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string }>;
+  searchParams: Promise<{ welcome?: string; err?: string }>;
 }) {
   const sp = await searchParams;
   if (!isConfigured()) redirect("/");
@@ -51,6 +52,10 @@ export default async function ProviderDashboard({
     (l) => l.status !== "new" && l.status !== "accepted"
   );
 
+  const overLimit =
+    provider.free_leads_remaining <= 0 &&
+    provider.balance_paise >= (provider.credit_limit_paise ?? 50000);
+
   const responded = leads.filter((l) => l.responded_at).length;
   const responseRate = leads.length ? Math.round((responded / leads.length) * 100) : null;
 
@@ -75,11 +80,7 @@ export default async function ProviderDashboard({
               <h1 className="text-[27px] m-0">{provider.display_name}</h1>
               <p className="text-[13px] text-charcoal-soft mt-1 flex items-center gap-2">
                 <span className="font-mono tracking-wide">{provider.public_id}</span>
-                {provider.status === "active" ? (
-                  <Badge tone="sage">Live</Badge>
-                ) : (
-                  <Badge tone="mustard">Awaiting approval</Badge>
-                )}
+                <StatusBadge status={provider.status} />
               </p>
             </div>
             <div className="flex-1" />
@@ -125,6 +126,25 @@ export default async function ProviderDashboard({
             </div>
           </Card>
 
+          {sp.err && (
+            <div className="mb-6">
+              <Note tone="mustard">
+                <b>That didn&rsquo;t go through.</b> {sp.err}
+              </Note>
+            </div>
+          )}
+
+          {overLimit && (
+            <div className="mb-6">
+              <Note tone="mustard">
+                <b>You&rsquo;ve reached your limit of {rupees(provider.credit_limit_paise ?? 50000)} outstanding.</b>{" "}
+                Requests still reach you, but accepting is paused until{" "}
+                {rupees(provider.balance_paise)} is settled. Pay an administrator by
+                UPI and they will record it — your balance updates as soon as they do.
+              </Note>
+            </div>
+          )}
+
           {blocked.length > 0 && (
             <div className="mb-7">
               <Note tone="mustard">
@@ -143,6 +163,12 @@ export default async function ProviderDashboard({
               </Note>
             </div>
           )}
+
+          {/* -------------------------------------------------- availability */}
+          <div className="mb-7">
+            <SectionHeader>Your listing</SectionHeader>
+            <Availability status={provider.status} />
+          </div>
 
           {/* ---------------------------------------------------------- inbox
               Order on this page follows what a provider is here to do:
@@ -301,4 +327,17 @@ function LeadCard({
       )}
     </Card>
   );
+}
+
+export function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { tone: "sage" | "mustard" | "neutral"; label: string }> = {
+    active: { tone: "sage", label: "Live" },
+    pending: { tone: "mustard", label: "Awaiting approval" },
+    paused: { tone: "neutral", label: "Paused by you" },
+    suspended: { tone: "mustard", label: "Suspended" },
+    rejected: { tone: "neutral", label: "Not approved" },
+    closed: { tone: "neutral", label: "Closed" },
+  };
+  const m = map[status] ?? { tone: "neutral" as const, label: status };
+  return <Badge tone={m.tone}>{m.label}</Badge>;
 }
