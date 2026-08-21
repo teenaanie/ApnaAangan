@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
+import { BRAND } from "@/lib/brand";
 
 /* ------------------------------------------------------------------ brand -- */
 
@@ -14,10 +15,10 @@ export function Mark({ className = "w-8 h-8" }: { className?: string }) {
 export function Logo({ href = "/", subtitle }: { href?: string; subtitle?: string }) {
   return (
     <Link href={href} className="flex items-center gap-2.5 shrink-0">
-      <Mark className="w-[38px] h-[38px]" />
+      <Mark className="w-[32px] h-[32px] sm:w-[38px] sm:h-[38px]" />
       <span className="leading-none">
-        <span className="display block text-[21px] text-terracotta font-semibold tracking-tight">
-          Aangan
+        <span className="display block text-[18px] sm:text-[21px] text-terracotta font-semibold tracking-tight whitespace-nowrap">
+          {BRAND.name}
         </span>
         {subtitle && (
           <span className="block text-[10px] uppercase tracking-[0.14em] text-charcoal-faint mt-0.5">

@@ -40,6 +40,21 @@ export async function getLocalities(): Promise<Locality[]> {
 }
 
 /** Public listing cards, filtered by free-text, category and locality. */
+/**
+ * Search.
+ *
+ * Every word must match, but each word may match anywhere — title,
+ * description, the provider's name, the category label, or the keywords the
+ * provider added. That is what makes "eggless cake" and "cake eggless" both
+ * work, and what lets "dabba" find a listing that only ever says "tiffin".
+ *
+ * Chained .or() calls are ANDed by PostgREST, which is exactly the shape we
+ * want: (word1 anywhere) AND (word2 anywhere).
+ *
+ * This is a sequential scan over the view. At a few hundred listings that is
+ * microseconds; if the directory ever reaches thousands, move search_blob to a
+ * stored generated column on listings with a trigram index and match on that.
+ */
 export async function searchListings(opts: {
   q?: string;
   category?: string;
@@ -51,13 +66,30 @@ export async function searchListings(opts: {
 
   if (opts.category) query = query.eq("category_slug", opts.category);
   if (opts.locality) query = query.eq("locality_slug", opts.locality);
-  if (opts.q) {
-    const term = `%${opts.q.replace(/[%_]/g, "")}%`;
-    query = query.or(`title.ilike.${term},description.ilike.${term},display_name.ilike.${term}`);
+
+  for (const word of searchWords(opts.q)) {
+    query = query.ilike("search_blob", `%${word}%`);
   }
 
   const { data } = await query.order("avg_rating", { ascending: false });
   return (data as ListingCard[]) ?? [];
+}
+
+/**
+ * The query, split into words worth matching.
+ *
+ * PostgREST filter values are comma- and parenthesis-delimited, so those are
+ * stripped rather than escaped. % and _ are stripped too, or a search for
+ * "50%" would match everything.
+ */
+export function searchWords(q?: string): string[] {
+  if (!q) return [];
+  return q
+    .toLowerCase()
+    .replace(/[%_,()"'\\]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 2)
+    .slice(0, 6);
 }
 
 export type LiveUpdate = {
@@ -103,9 +135,12 @@ export async function getLiveUpdates(opts: {
     query = query.eq("providers.locality_id", (loc as { id: string }).id);
   }
 
-  if (opts.q) {
-    const term = `%${opts.q.replace(/[%_]/g, "")}%`;
-    query = query.or(`headline.ilike.${term},detail.ilike.${term}`);
+  // Same word-by-word rule as the directory, so a search that finds a baker
+  // also finds today's post from that baker. Keywords are not on updates —
+  // an update is one line written today, and asking for synonyms every
+  // morning is how the feature stops being used.
+  for (const word of searchWords(opts.q)) {
+    query = query.or(`headline.ilike.%${word}%,detail.ilike.%${word}%`);
   }
 
   const { data } = await query;
@@ -120,7 +155,9 @@ export async function getProviderByPublicId(publicId: string) {
     .select("*, localities(name, slug, area)")
     .eq("public_id", publicId.toUpperCase())
     .maybeSingle();
-  return data as (Provider & { localities: { name: string; slug: string; area: string | null } | null }) | null;
+  return data as (Provider & {
+    localities: { name: string; slug: string; area: string | null; map_url: string | null } | null;
+  }) | null;
 }
 
 export async function getListingsForProvider(providerId: string): Promise<ListingCard[]> {

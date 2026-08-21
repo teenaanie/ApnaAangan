@@ -229,3 +229,101 @@ export async function setAvailability(
         : "You're live again.",
   };
 }
+
+/** Pause or resume a single listing, leaving the others alone. */
+export async function setListingPaused(formData: FormData) {
+  const listingId = String(formData.get("listing_id") || "");
+  const paused = formData.get("paused") === "true";
+  if (!listingId) return;
+
+  const supabase = await createClient();
+  await supabase.rpc("set_listing_paused", {
+    p_listing_id: listingId,
+    p_paused: paused,
+  });
+
+  revalidatePath("/provider/listings");
+  revalidatePath("/provider");
+  revalidatePath("/");
+}
+
+/**
+ * Edit a listing that is already published.
+ *
+ * Which fields were touched decides whether it goes back for approval — the
+ * database makes that call (update_my_listing), because "did the wording
+ * change?" is the whole of the moderation question and must not be decided by
+ * the browser.
+ */
+export async function updateListing(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const id = String(formData.get("listing_id") || "");
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim();
+  const categoryId = String(formData.get("category_id") || "") || null;
+  const priceFrom = Number(formData.get("price_from") || 0) || null;
+  const priceUnit = String(formData.get("price_unit") || "onwards").trim();
+  const availability = String(formData.get("availability") || "").trim();
+  const icon = String(formData.get("icon") || "").trim();
+  const keywords = parseKeywords(String(formData.get("keywords") || ""));
+
+  if (!id) return { error: "Which listing?" };
+  if (title.length < 3) return { error: "Give the listing a title." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_my_listing", {
+    p_listing_id: id,
+    p_title: title,
+    p_description: description || null,
+    p_category_id: categoryId,
+    p_price_from: priceFrom,
+    p_price_unit: priceUnit,
+    p_availability: availability || null,
+    p_icon: icon || null,
+    p_keywords: keywords,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string; requeued?: boolean };
+  if (!res?.ok) return { error: res?.error ?? "Could not save that." };
+
+  revalidatePath("/provider/listings");
+  revalidatePath("/");
+
+  return {
+    ok: res.requeued
+      ? "Saved. Because the wording changed, it goes back for a quick check before it reappears — usually within a day."
+      : "Saved, and live now.",
+  };
+}
+
+/** Remove a listing from the menu without deleting the history behind it. */
+export async function archiveListing(formData: FormData) {
+  const id = String(formData.get("listing_id") || "");
+  if (!id) return;
+
+  const supabase = await createClient();
+  await supabase.rpc("archive_my_listing", { p_listing_id: id });
+
+  revalidatePath("/provider/listings");
+  revalidatePath("/");
+}
+
+/**
+ * "dabba, Tiffin , dabba" -> ["dabba", "tiffin"].
+ *
+ * The database tidies these too, and deliberately so — this is convenience,
+ * that is the guarantee. Anything reaching the table by another route still
+ * gets lowercased, deduplicated and capped.
+ */
+function parseKeywords(raw: string): string[] {
+  const seen = new Set<string>();
+  for (const part of raw.split(/[,\n]/)) {
+    const k = part.trim().toLowerCase();
+    if (k.length >= 2 && k.length <= 30) seen.add(k);
+    if (seen.size >= 12) break;
+  }
+  return [...seen];
+}

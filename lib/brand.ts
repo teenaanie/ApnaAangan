@@ -1,6 +1,9 @@
 /** Brand constants from the Aangan brand guideline. */
 export const BRAND = {
-  name: "Aangan",
+  /** The wordmark, shown in the header, page titles and share cards. */
+  name: "Apna Aangan",
+  /** The short form, for use inside sentences where the full name would drag. */
+  shortName: "Aangan",
   tagline: "Neighbours who make, teach and fix",
   /** Purpose, from the guideline. Used in metadata and the footer. */
   purpose:

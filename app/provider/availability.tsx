@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { setAvailability, type ActionState } from "./actions";
@@ -22,7 +23,17 @@ function Submit({ label, variant }: { label: string; variant: "sage" | "ghost" |
  * ticked, because it is neither. Putting them side by side as equal buttons
  * would be how someone leaves Aangan by accident.
  */
-export default function Availability({ status }: { status: string }) {
+export default function Availability({
+  status,
+  liveListings,
+  totalListings,
+  pausedListings,
+}: {
+  status: string;
+  liveListings: number;
+  totalListings: number;
+  pausedListings: number;
+}) {
   const [state, action] = useActionState<ActionState, FormData>(setAvailability, {});
   const [showClose, setShowClose] = useState(false);
 
@@ -36,14 +47,16 @@ export default function Availability({ status }: { status: string }) {
         <Note tone="mustard">
           {closed ? (
             <>
-              <b>Your listing is closed.</b> Neighbours can&rsquo;t see it and no
-              new requests can reach you. If you want to come back, message an
-              administrator — reopening is their side of the switch, not yours.
+              <b>Your listing is closed.</b> All {totalListings} of your listings
+              are hidden and no new requests can reach you. If you want to come
+              back, message an administrator — reopening is their side of the
+              switch, not yours.
             </>
           ) : (
             <>
-              <b>Your listing has been suspended by a moderator.</b> Please get in
-              touch to sort it out. Nothing is being charged while it is suspended.
+              <b>Your listing has been suspended by a moderator.</b> All{" "}
+              {totalListings} of your listings are hidden. Please get in touch to
+              sort it out — nothing is being charged while it is suspended.
             </>
           )}
         </Note>
@@ -60,8 +73,21 @@ export default function Availability({ status }: { status: string }) {
           </p>
           <p className="text-[13px] text-charcoal-soft leading-snug m-0">
             {paused
-              ? "Your listing is hidden from the directory and nobody can send you a request. Nothing is being charged. Resume whenever you're ready."
-              : "Going away, or booked solid? Pause instead of ignoring requests — an unanswered enquiry costs you nothing but it costs a neighbour a day of waiting."}
+              ? `All ${totalListings} of your listings are hidden and nobody can send you a request. Nothing is being charged. Resume whenever you're ready.`
+              : `${liveListings} of ${totalListings} listing${totalListings === 1 ? "" : "s"} visible to neighbours right now.` +
+                (pausedListings > 0
+                  ? ` You have paused ${pausedListings} yourself.`
+                  : " Going away, or booked solid? Pause rather than leave requests unanswered.")}
+          </p>
+          <p className="text-[12px] text-charcoal-faint mt-1.5 m-0">
+            {paused
+              ? "Resuming brings back everything except listings you paused individually."
+              : "Need to stop just one thing? "}
+            {!paused && (
+              <Link href="/provider/listings" className="underline font-semibold text-terracotta">
+                Pause a single listing
+              </Link>
+            )}
           </p>
         </div>
 

@@ -33,6 +33,20 @@ export default async function ProviderDashboard({
     .order("created_at", { ascending: false })
     .limit(50);
 
+  const { data: listingRows } = await supabase
+    .from("listings")
+    .select("id, title, status, is_active, paused_at")
+    .eq("provider_id", provider.id);
+
+  const myListings = (listingRows ?? []) as unknown as Array<{
+    id: string; title: string; status: string; is_active: boolean; paused_at: string | null;
+  }>;
+  const liveListings =
+    provider.status === "active"
+      ? myListings.filter((l) => l.status === "approved" && l.is_active && !l.paused_at).length
+      : 0;
+  const pausedListings = myListings.filter((l) => l.paused_at).length;
+
   const { data: blockedRows } = await supabase
     .from("blocked_attempts")
     .select("id, phone, reason, status, created_at")
@@ -51,6 +65,7 @@ export default async function ProviderDashboard({
   const otherAnswered = leads.filter(
     (l) => l.status !== "new" && l.status !== "accepted"
   );
+  const declined = leads.filter((l) => l.status === "declined").length;
 
   const overLimit =
     provider.free_leads_remaining <= 0 &&
@@ -95,6 +110,7 @@ export default async function ProviderDashboard({
             <div className="flex flex-wrap gap-8">
               <Stat value={provider.leads_total} label="requests received" />
               <Stat value={provider.leads_accepted} label="accepted" />
+              <Stat value={declined} label="declined" />
               <Stat
                 value={responseRate === null ? "—" : `${responseRate}%`}
                 label="you responded to"
@@ -167,7 +183,12 @@ export default async function ProviderDashboard({
           {/* -------------------------------------------------- availability */}
           <div className="mb-7">
             <SectionHeader>Your listing</SectionHeader>
-            <Availability status={provider.status} />
+            <Availability
+              status={provider.status}
+              liveListings={liveListings}
+              totalListings={myListings.length}
+              pausedListings={pausedListings}
+            />
           </div>
 
           {/* ---------------------------------------------------------- inbox

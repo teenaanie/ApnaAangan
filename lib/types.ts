@@ -1,5 +1,11 @@
 export type UserRole = "resident" | "provider" | "admin";
-export type ProviderStatus = "pending" | "active" | "suspended" | "rejected";
+export type ProviderStatus =
+  | "pending"
+  | "active"
+  | "paused"    // the provider went quiet, their own choice
+  | "suspended" // an administrator did it
+  | "closed"    // the provider left
+  | "rejected";
 export type LeadStatus =
   | "new" | "accepted" | "declined" | "expired" | "completed" | "cancelled";
 export type Moderation = "pending" | "approved" | "rejected";
@@ -35,6 +41,7 @@ export type Provider = {
 };
 
 export type ListingCard = {
+  first_approved_at?: string | null;
   id: string;
   title: string;
   description: string | null;

@@ -9,6 +9,7 @@ import {
   isConfigured,
   searchListings,
 } from "@/lib/data";
+import { listingLabel } from "@/lib/listing-label";
 import type { ListingCard } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -209,6 +210,13 @@ function Chip({
 }
 
 function ListingTile({ l }: { l: ListingCard }) {
+  const label = listingLabel({
+    firstApprovedAt: l.first_approved_at ?? null,
+    leadsAccepted: l.leads_accepted ?? 0,
+    reviewCount: l.review_count,
+    avgRating: Number(l.avg_rating),
+  });
+
   return (
     <Link href={`/p/${l.public_id}?listing=${l.id}`}>
       <Card className="p-4 h-full flex flex-col gap-2.5 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-16px_rgba(51,52,51,.35)] transition">
@@ -224,19 +232,21 @@ function ListingTile({ l }: { l: ListingCard }) {
               {l.display_name}
               {l.locality_name ? ` · ${l.locality_name}` : ""}
             </p>
-            <p className="text-[12px] font-semibold mt-1 flex items-center gap-1.5">
-              {l.review_count > 0 ? (
-                <>
-                  <span className="text-mustard-bright">★</span>
-                  {Number(l.avg_rating).toFixed(1)}
-                  <span className="text-charcoal-faint font-normal">
-                    ({l.review_count})
-                  </span>
-                </>
-              ) : (
-                <span className="text-charcoal-faint font-normal">New listing</span>
-              )}
-            </p>
+            {label && (
+              <p className="text-[12px] font-semibold mt-1">
+                <span
+                  className={
+                    label.tone === "sage"
+                      ? "text-sage-deep"
+                      : label.tone === "mustard"
+                      ? "text-mustard"
+                      : "text-charcoal-faint font-normal"
+                  }
+                >
+                  {label.text}
+                </span>
+              </p>
+            )}
           </div>
         </div>
 

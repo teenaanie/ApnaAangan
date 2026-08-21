@@ -13,13 +13,13 @@ const GOOGLE_FONTS =
 
 export const metadata: Metadata = {
   title: {
-    default: "Aangan — neighbours who make, teach and fix",
-    template: "%s · Aangan",
+    default: `${BRAND.name} — neighbours who make, teach and fix`,
+    template: `%s · ${BRAND.name}`,
   },
   description: BRAND.purpose,
   icons: { icon: "/aangan-mark.svg", apple: "/icon-192.png" },
   openGraph: {
-    title: "Aangan",
+    title: BRAND.name,
     description: BRAND.tagline,
     images: ["/aangan-mark-512.png"],
   },
@@ -40,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="border-t border-sandstone-soft mt-10">
           <div className="max-w-5xl mx-auto px-4 py-8 text-[12.5px] text-charcoal-soft">
             <div className="flex flex-wrap gap-x-5 gap-y-2 items-center">
-              <span className="display text-terracotta text-base">Aangan</span>
+              <span className="display text-terracotta text-base">{BRAND.name}</span>
               <Link href="/" className="hover:text-terracotta">Discover</Link>
               <Link href="/auth/login?next=/provider/onboarding" className="hover:text-terracotta">
                 List your work

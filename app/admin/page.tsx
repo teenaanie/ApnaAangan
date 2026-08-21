@@ -31,7 +31,7 @@ export default async function AdminPage() {
     // someone already in the directory.
     supabase.from("listings")
       .select("id, title, description, status, providers!inner(public_id, display_name, status, provider_contacts(phone))")
-      .eq("status", "pending").eq("providers.status", "active")
+      .eq("status", "pending").in("providers.status", ["active", "paused"])
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
       .eq("status", "pending").order("created_at").limit(30),
@@ -144,6 +144,12 @@ export default async function AdminPage() {
           <div className="flex flex-wrap items-start gap-3">
             <h1 className="text-[27px] mb-1">Admin</h1>
             <div className="flex-1" />
+            <Link
+              href="/admin/societies"
+              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+            >
+              Societies
+            </Link>
             <Link
               href="/admin/providers"
               className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"

@@ -1,12 +1,57 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import Nav from "@/components/nav";
 import AddListing from "./add-listing";
-import { Badge, Card, Empty, SectionHeader, Shell } from "@/components/ui";
+import EditListing from "./edit-listing";
+import { setListingPaused } from "../actions";
+import { Badge, Button, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getCategories, getMyProvider, isConfigured } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your listings" };
+
+type Row = {
+  id: string;
+  title: string;
+  description: string | null;
+  price_from: number | null;
+  price_unit: string | null;
+  availability: string | null;
+  icon: string | null;
+  status: string;
+  is_active: boolean;
+  paused_at: string | null;
+  category_id: string | null;
+  edited_at: string | null;
+  keywords: string[] | null;
+};
+
+/**
+ * What a resident can actually see, said plainly.
+ *
+ * Three separate things can hide a listing — the account being paused or
+ * closed, this listing being paused, and moderation not having approved it —
+ * and a provider does not care which layer it is. They care whether anyone can
+ * find them. So each card states the outcome first and the reason second.
+ */
+function visibility(l: Row, providerStatus: string) {
+  if (providerStatus === "paused")
+    return { live: false, label: "Hidden", why: "Everything is paused" };
+  if (providerStatus === "closed")
+    return { live: false, label: "Hidden", why: "Your listing is closed" };
+  if (providerStatus === "suspended")
+    return { live: false, label: "Hidden", why: "Suspended by a moderator" };
+  if (providerStatus === "pending")
+    return { live: false, label: "Not yet live", why: "Awaiting approval" };
+  if (l.paused_at) return { live: false, label: "Paused", why: "You paused this one" };
+  if (!l.is_active) return { live: false, label: "Hidden", why: "Archived" };
+  if (l.status === "rejected")
+    return { live: false, label: "Rejected", why: "A moderator turned this down" };
+  if (l.status !== "approved")
+    return { live: false, label: "Not yet live", why: "Awaiting approval" };
+  return { live: true, label: "Live", why: null as string | null };
+}
 
 export default async function ListingsPage() {
   if (!isConfigured()) redirect("/");
@@ -17,52 +62,159 @@ export default async function ListingsPage() {
   const [{ data: rows }, categories] = await Promise.all([
     supabase
       .from("listings")
-      .select("id, title, description, price_from, price_unit, availability, icon, status, is_active")
+      .select(
+        "id, title, description, price_from, price_unit, availability, icon, status, is_active, paused_at, category_id, edited_at, keywords"
+      )
       .eq("provider_id", provider.id)
       .order("created_at", { ascending: false }),
     getCategories(),
   ]);
 
-  const listings = rows ?? [];
+  const all = (rows ?? []) as unknown as Row[];
+  const listings = all.filter((l) => l.is_active);
+  const archived = all.filter((l) => !l.is_active);
+  const liveCount = listings.filter((l) => visibility(l, provider.status).live).length;
+  const accountOff = ["paused", "closed", "suspended"].includes(provider.status);
 
   return (
     <>
       <Nav subtitle="Provider" />
       <Shell>
         <div className="py-9 max-w-2xl">
-          <h1 className="text-[27px] mb-6">Your listings</h1>
+          <h1 className="text-[27px] mb-1">Your listings</h1>
+          <p className="text-charcoal-soft text-sm mb-6">
+            {liveCount} of {listings.length} visible to neighbours right now.
+          </p>
 
-          <SectionHeader>Live and pending · {listings.length}</SectionHeader>
+          {accountOff && (
+            <div className="mb-6">
+              <Note tone="mustard">
+                {provider.status === "paused" ? (
+                  <>
+                    <b>Everything is paused.</b> None of these are visible, whatever
+                    each one says below. Resume from{" "}
+                    <Link href="/provider" className="underline font-semibold">
+                      your dashboard
+                    </Link>{" "}
+                    to put the ones marked Live back in the directory.
+                  </>
+                ) : provider.status === "closed" ? (
+                  <>
+                    <b>Your listing is closed.</b> Nothing here is visible, and only
+                    an administrator can reopen it.
+                  </>
+                ) : (
+                  <>
+                    <b>Your account is suspended.</b> Nothing here is visible until a
+                    moderator lifts it.
+                  </>
+                )}
+              </Note>
+            </div>
+          )}
+
+          <SectionHeader>Everything you offer · {listings.length}</SectionHeader>
           {listings.length === 0 ? (
             <Empty title="Nothing listed yet">Add your first below.</Empty>
           ) : (
             <div className="grid gap-3 mb-9">
-              {listings.map((l) => (
-                <Card key={l.id} className="p-4 flex items-start gap-3">
-                  <span className="text-xl leading-none">{l.icon}</span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[15px] font-semibold m-0 text-charcoal">{l.title}</h3>
-                    {l.description && (
-                      <p className="text-[13px] text-charcoal-soft mt-1 leading-snug">
-                        {l.description}
-                      </p>
-                    )}
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {l.price_from != null && (
-                        <span className="text-[13px] font-bold">
-                          ₹{l.price_from.toLocaleString("en-IN")}{" "}
-                          <span className="font-normal text-charcoal-faint">{l.price_unit}</span>
-                        </span>
-                      )}
-                      {l.availability && <Badge>{l.availability}</Badge>}
+              {listings.map((l) => {
+                const v = visibility(l, provider.status);
+                const paused = Boolean(l.paused_at);
+                // Pausing one listing is meaningless while everything is off,
+                // and rejected or unapproved listings are not the provider's
+                // switch to flip.
+                const canToggle =
+                  !accountOff && provider.status === "active" && l.status === "approved";
+
+                return (
+                  <Card
+                    key={l.id}
+                    className={`p-4 ${v.live ? "" : "bg-cream/60"}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={`text-xl leading-none ${v.live ? "" : "opacity-50"}`}>
+                        {l.icon}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[15px] font-semibold m-0 text-charcoal">
+                          {l.title}
+                        </h3>
+                        {l.description && (
+                          <p className="text-[13px] text-charcoal-soft mt-1 leading-snug">
+                            {l.description}
+                          </p>
+                        )}
+                        <div className="flex gap-2 mt-2 flex-wrap items-center">
+                          {l.price_from != null && (
+                            <span className="text-[13px] font-bold">
+                              ₹{l.price_from.toLocaleString("en-IN")}{" "}
+                              <span className="font-normal text-charcoal-faint">
+                                {l.price_unit}
+                              </span>
+                            </span>
+                          )}
+                          {l.availability && <Badge>{l.availability}</Badge>}
+                        </div>
+                        {(l.keywords?.length ?? 0) > 0 && (
+                          <p className="text-[11.5px] text-charcoal-faint mt-1.5">
+                            Also found by: {l.keywords!.join(", ")}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <Badge tone={v.live ? "sage" : "mustard"}>{v.label}</Badge>
+                        {v.why && (
+                          <p className="text-[11px] text-charcoal-faint mt-1 max-w-[130px]">
+                            {v.why}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <Badge tone={l.status === "approved" ? "sage" : "mustard"}>
-                    {l.status === "approved" ? "Live" : "Pending"}
-                  </Badge>
-                </Card>
-              ))}
+
+                    <EditListing
+                      listing={l}
+                      categories={categories}
+                      canArchive={listings.length > 1}
+                    />
+
+                    {canToggle && (
+                      <form
+                        action={setListingPaused}
+                        className="mt-3 pt-3 border-t border-sandstone-soft flex flex-wrap items-center gap-3"
+                      >
+                        <input type="hidden" name="listing_id" value={l.id} />
+                        <input type="hidden" name="paused" value={paused ? "false" : "true"} />
+                        <Button type="submit" variant={paused ? "sage" : "ghost"}>
+                          {paused ? "Resume this listing" : "Pause this one"}
+                        </Button>
+                        <span className="text-[11.5px] text-charcoal-faint flex-1 min-w-[180px]">
+                          {paused
+                            ? "Nobody can see or request this. Your other listings are unaffected."
+                            : "Stops this one only — useful in exam week, or when an oven is being repaired."}
+                        </span>
+                      </form>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
+          )}
+
+          {archived.length > 0 && (
+            <>
+              <SectionHeader>Removed · {archived.length}</SectionHeader>
+              <div className="grid gap-2 mb-9">
+                {archived.map((l) => (
+                  <Card key={l.id} className="p-3 flex items-center gap-3 bg-cream/60">
+                    <span className="text-lg opacity-40">{l.icon}</span>
+                    <span className="text-[13.5px] text-charcoal-soft flex-1">{l.title}</span>
+                    <Badge>Removed</Badge>
+                  </Card>
+                ))}
+              </div>
+            </>
           )}
 
           <SectionHeader>Add another</SectionHeader>

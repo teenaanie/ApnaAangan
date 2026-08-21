@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isGoogleMapsUrl } from "@/lib/maps";
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -204,4 +205,98 @@ export async function recordSettlement(
       (res.balance_paise ?? 0) / 100
     ).toLocaleString("en-IN")}.`,
   };
+}
+
+/* --------------------------------------------------------------- societies */
+
+export type SocietyState = { error?: string; ok?: string };
+
+/**
+ * The slug is derived, never typed.
+ *
+ * It ends up in every share link and QR code a provider hands out, so it must
+ * be stable and unguessable-by-typo. Deriving it from the name means nobody
+ * invents "MontVert_Pristine" at eleven at night, and the rename form
+ * deliberately cannot change it afterwards — a changed slug silently breaks
+ * every card already in circulation.
+ */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 60);
+}
+
+export async function addSociety(
+  _prev: SocietyState,
+  formData: FormData
+): Promise<SocietyState> {
+  const name = String(formData.get("name") || "").trim();
+  const area = String(formData.get("area") || "").trim();
+  const city = String(formData.get("city") || "Pune").trim() || "Pune";
+  const pincode = String(formData.get("pincode") || "").trim();
+  const mapUrl = String(formData.get("map_url") || "").trim();
+
+  if (name.length < 3) return { error: "What is the society called?" };
+  if (mapUrl && !isGoogleMapsUrl(mapUrl))
+    return { error: "That doesn't look like a Google Maps link. Paste the one from Share in the Maps app." };
+  if (pincode && !/^\d{6}$/.test(pincode))
+    return { error: "An Indian pincode is 6 digits, or leave it blank." };
+
+  const slug = slugify(name);
+  if (!slug) return { error: "That name has no letters or numbers in it." };
+
+  const supabase = await assertAdmin();
+
+  const { data: clash } = await supabase
+    .from("localities").select("name").eq("slug", slug).maybeSingle();
+  if (clash)
+    return { error: `“${(clash as { name: string }).name}” already uses that name.` };
+
+  const { error } = await supabase.from("localities").insert({
+    name,
+    slug,
+    area: area || null,
+    city,
+    pincode: pincode || null,
+    map_url: mapUrl || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/societies");
+  revalidatePath("/");
+  return {
+    ok: `Added. Providers can now register under ${name}, and residents can filter by it.`,
+  };
+}
+
+/** Fix a name, area or pincode. The slug stays put — see slugify above. */
+export async function renameSociety(formData: FormData) {
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+  const area = String(formData.get("area") || "").trim();
+  const pincode = String(formData.get("pincode") || "").trim();
+  const mapUrl = String(formData.get("map_url") || "").trim();
+  if (!id || name.length < 3) return;
+  // Silently keeping a bad link would be worse than dropping it — the database
+  // would reject the whole update and the rename would appear to do nothing.
+  if (mapUrl && !isGoogleMapsUrl(mapUrl)) return;
+
+  const supabase = await assertAdmin();
+  await supabase
+    .from("localities")
+    .update({
+      name,
+      area: area || null,
+      pincode: pincode || null,
+      map_url: mapUrl || null,
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/societies");
+  revalidatePath("/");
 }
