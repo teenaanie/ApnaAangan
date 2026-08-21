@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { archiveListing, updateListing, type ActionState } from "../actions";
 import { Button, Field, Note, inputClass } from "@/components/ui";
@@ -49,6 +49,27 @@ export default function EditListing({
   const [title, setTitle] = useState(listing.title);
   const [desc, setDesc] = useState(listing.description ?? "");
   const [confirmArchive, setConfirmArchive] = useState(false);
+
+  // Close the form once the save has actually succeeded.
+  //
+  // A form that stays open after saving reads as "that didn't work" — the
+  // obvious response is to press Save again, and the second press re-queues a
+  // listing that had already gone through. Closing is the confirmation.
+  //
+  // Keyed on the whole `state` object, not `state.ok`: useActionState hands
+  // back a new object per submission, so re-opening the form later does not
+  // re-fire this and slam it shut again.
+  useEffect(() => {
+    if (state.ok) setOpen(false);
+  }, [state]);
+
+  // The card above re-renders with the saved values after revalidation. Re-sync
+  // from the prop so the "this will go back for approval" warning is measured
+  // against what is now stored, not against what was there before the save.
+  useEffect(() => {
+    setTitle(listing.title);
+    setDesc(listing.description ?? "");
+  }, [listing.title, listing.description]);
 
   const textChanged =
     title.trim() !== listing.title ||

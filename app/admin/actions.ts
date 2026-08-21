@@ -275,19 +275,25 @@ export async function addSociety(
 }
 
 /** Fix a name, area or pincode. The slug stays put — see slugify above. */
-export async function renameSociety(formData: FormData) {
+export async function renameSociety(
+  _prev: SocietyState,
+  formData: FormData
+): Promise<SocietyState> {
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
   const area = String(formData.get("area") || "").trim();
   const pincode = String(formData.get("pincode") || "").trim();
   const mapUrl = String(formData.get("map_url") || "").trim();
-  if (!id || name.length < 3) return;
-  // Silently keeping a bad link would be worse than dropping it — the database
-  // would reject the whole update and the rename would appear to do nothing.
-  if (mapUrl && !isGoogleMapsUrl(mapUrl)) return;
+
+  if (!id) return { error: "Which society?" };
+  if (name.length < 3) return { error: "A society needs a name." };
+  if (pincode && !/^\d{6}$/.test(pincode))
+    return { error: "An Indian pincode is 6 digits, or leave it blank." };
+  if (mapUrl && !isGoogleMapsUrl(mapUrl))
+    return { error: "That doesn't look like a Google Maps link. Use Share in the Maps app." };
 
   const supabase = await assertAdmin();
-  await supabase
+  const { error } = await supabase
     .from("localities")
     .update({
       name,
@@ -296,7 +302,9 @@ export async function renameSociety(formData: FormData) {
       map_url: mapUrl || null,
     })
     .eq("id", id);
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/societies");
   revalidatePath("/");
+  return { ok: "Saved." };
 }

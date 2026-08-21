@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import AddSociety from "./add-society";
-import { renameSociety } from "../actions";
-import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, inputClass } from "@/components/ui";
+import EditSociety from "./edit-society";
+import { Badge, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 
@@ -93,52 +93,8 @@ export default async function Societies() {
                       </div>
                     </div>
 
-                    {/* Rename only. The slug is in shared links and QR codes, so
-                        it is not editable here — a changed slug silently breaks
-                        every card already handed out. */}
-                    <form
-                      action={renameSociety}
-                      className="mt-3 pt-3 border-t border-sandstone-soft flex flex-wrap items-end gap-2"
-                    >
-                      <input type="hidden" name="id" value={s.id} />
-                      <label className="block flex-1 min-w-[150px]">
-                        <span className="block text-[11px] font-bold mb-1">Name</span>
-                        <input
-                          name="name"
-                          defaultValue={s.name}
-                          className={`${inputClass} py-1.5`}
-                        />
-                      </label>
-                      <label className="block flex-1 min-w-[130px]">
-                        <span className="block text-[11px] font-bold mb-1">Area</span>
-                        <input
-                          name="area"
-                          defaultValue={s.area ?? ""}
-                          className={`${inputClass} py-1.5`}
-                        />
-                      </label>
-                      <label className="block w-[100px]">
-                        <span className="block text-[11px] font-bold mb-1">Pincode</span>
-                        <input
-                          name="pincode"
-                          defaultValue={s.pincode ?? ""}
-                          className={`${inputClass} py-1.5`}
-                        />
-                      </label>
-                      <label className="block w-full">
-                        <span className="block text-[11px] font-bold mb-1">
-                          Google Maps link
-                        </span>
-                        <input
-                          name="map_url"
-                          type="url"
-                          defaultValue={s.map_url ?? ""}
-                          className={`${inputClass} py-1.5`}
-                          placeholder="https://maps.app.goo.gl/..."
-                        />
-                      </label>
-                      <Button type="submit" variant="ghost">Save</Button>
-                    </form>
+                    <EditSociety society={s} />
+
                   </Card>
                 );
               })}
