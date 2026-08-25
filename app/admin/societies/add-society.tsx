@@ -82,7 +82,7 @@ export default function AddSociety() {
             className={inputClass}
             placeholder="https://maps.app.goo.gl/..."
           />
-          <span className="block mt-1.5 text-[11.5px] text-charcoal-faint leading-snug">
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
             In Google Maps, find the society gate, press <b>Share</b> and copy the
             link. Residents use it to judge whether a provider is genuinely near
             them.
@@ -99,9 +99,9 @@ export default function AddSociety() {
         </Field>
 
         {state.error && (
-          <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>
+          <p className="text-body text-terracotta-deep mb-3">{state.error}</p>
         )}
-        {state.ok && <p className="text-[13px] text-sage-deep mb-3">{state.ok}</p>}
+        {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
 
         <Submit />
       </form>

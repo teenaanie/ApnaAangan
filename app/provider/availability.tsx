@@ -68,10 +68,10 @@ export default function Availability({
     <Card className="p-5">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-[15px] m-0 mb-1">
+          <p className="font-bold text-body m-0 mb-1">
             {paused ? "You are paused" : "You are taking requests"}
           </p>
-          <p className="text-[13px] text-charcoal-soft leading-snug m-0">
+          <p className="text-body text-charcoal-soft leading-snug m-0">
             {paused
               ? `All ${totalListings} of your listings are hidden and nobody can send you a request. Nothing is being charged. Resume whenever you're ready.`
               : `${liveListings} of ${totalListings} listing${totalListings === 1 ? "" : "s"} visible to neighbours right now.` +
@@ -79,12 +79,12 @@ export default function Availability({
                   ? ` You have paused ${pausedListings} yourself.`
                   : " Going away, or booked solid? Pause rather than leave requests unanswered.")}
           </p>
-          <p className="text-[12px] text-charcoal-faint mt-1.5 m-0">
+          <p className="text-caption text-charcoal-faint mt-1.5 m-0">
             {paused
               ? "Resuming brings back everything except listings you paused individually."
               : "Need to stop just one thing? "}
             {!paused && (
-              <Link href="/provider/listings" className="underline font-semibold text-terracotta">
+              <Link href="/provider/listings" className="underline font-bold text-terracotta-deep">
                 Pause a single listing
               </Link>
             )}
@@ -108,23 +108,23 @@ export default function Availability({
       </div>
 
       {state.error && (
-        <p className="text-[13px] text-terracotta-deep mt-3 mb-0">{state.error}</p>
+        <p className="text-body text-terracotta-deep mt-3 mb-0">{state.error}</p>
       )}
-      {state.ok && <p className="text-[13px] text-sage-deep mt-3 mb-0">{state.ok}</p>}
+      {state.ok && <p className="text-body text-sage-deep mt-3 mb-0">{state.ok}</p>}
 
       <div className="mt-4 pt-4 border-t border-sandstone-soft">
         {!showClose ? (
           <button
             type="button"
             onClick={() => setShowClose(true)}
-            className="text-[12px] text-charcoal-faint hover:text-terracotta underline"
+            className="text-caption text-charcoal-faint hover:text-terracotta-deep underline"
           >
             I want to close my listing for good
           </button>
         ) : (
           <form action={action}>
             <input type="hidden" name="status" value="closed" />
-            <p className="text-[13px] text-charcoal-soft leading-relaxed mb-3">
+            <p className="text-body text-charcoal-soft leading-relaxed mb-3">
               Closing removes you from the directory permanently. Your past
               requests are kept, and anything you still owe stays owed. You
               can&rsquo;t undo this yourself — an administrator would have to
@@ -136,7 +136,7 @@ export default function Availability({
                 name="confirm_close"
                 className="mt-0.5 w-4 h-4 accent-[#c86840] shrink-0"
               />
-              <span className="text-[13px]">
+              <span className="text-body">
                 Yes, close my listing. I understand it is not reversible from
                 here.
               </span>

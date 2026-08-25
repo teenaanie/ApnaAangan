@@ -33,7 +33,7 @@ export default function SettleForm({
       <input type="hidden" name="provider_id" value={providerId} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">
-          <span className="block text-[11px] font-bold mb-1">Amount received (₹)</span>
+          <span className="block text-caption font-bold mb-1">Amount received (₹)</span>
           <input
             name="amount_rupees"
             type="number"
@@ -45,7 +45,7 @@ export default function SettleForm({
           />
         </label>
         <label className="block">
-          <span className="block text-[11px] font-bold mb-1">How</span>
+          <span className="block text-caption font-bold mb-1">How</span>
           <select name="method" className={`${inputClass} w-[110px] py-1.5`} defaultValue="upi">
             <option value="upi">UPI</option>
             <option value="cash">Cash</option>
@@ -54,7 +54,7 @@ export default function SettleForm({
           </select>
         </label>
         <label className="block flex-1 min-w-[140px]">
-          <span className="block text-[11px] font-bold mb-1">Reference / note</span>
+          <span className="block text-caption font-bold mb-1">Reference / note</span>
           <input
             name="reference"
             className={`${inputClass} py-1.5`}
@@ -65,9 +65,9 @@ export default function SettleForm({
       </div>
 
       {state.error && (
-        <p className="text-[12px] text-terracotta-deep mt-2 mb-0">{state.error}</p>
+        <p className="text-caption text-terracotta-deep mt-2 mb-0">{state.error}</p>
       )}
-      {state.ok && <p className="text-[12px] text-sage-deep mt-2 mb-0">{state.ok}</p>}
+      {state.ok && <p className="text-caption text-sage-deep mt-2 mb-0">{state.ok}</p>}
     </form>
   );
 }

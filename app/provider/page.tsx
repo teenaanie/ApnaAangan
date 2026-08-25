@@ -10,6 +10,7 @@ import { getMyProvider, isConfigured } from "@/lib/data";
 import { FREE_LEADS, rupees } from "@/lib/brand";
 import { waGreeting, waLink } from "@/lib/whatsapp";
 import type { Lead } from "@/lib/types";
+import { WhatsApp } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your dashboard" };
@@ -92,16 +93,21 @@ export default async function ProviderDashboard({
 
           <div className="flex flex-wrap items-start gap-4 mb-6">
             <div>
-              <h1 className="text-[27px] m-0">{provider.display_name}</h1>
-              <p className="text-[13px] text-charcoal-soft mt-1 flex items-center gap-2">
+              <h1 className="m-0">{provider.display_name}</h1>
+              <p className="text-body text-charcoal-soft mt-1 flex items-center gap-2">
                 <span className="font-mono tracking-wide">{provider.public_id}</span>
                 <StatusBadge status={provider.status} />
               </p>
             </div>
             <div className="flex-1" />
-            <div className="flex gap-2">
-              <LinkButton href="/provider/share" variant="sage">Share your link</LinkButton>
+            <div className="flex gap-2 flex-wrap">
+              <LinkButton href="/provider/share" variant="sage">
+                Share &amp; QR code
+              </LinkButton>
               <LinkButton href="/provider/listings" variant="ghost">Listings</LinkButton>
+              <LinkButton href={`/p/${provider.public_id}`} variant="ghost">
+                View my page
+              </LinkButton>
             </div>
           </div>
 
@@ -241,9 +247,9 @@ export default async function ProviderDashboard({
             </div>
           )}
 
-          <p className="mt-8 text-[12px] text-charcoal-faint">
+          <p className="mt-8 text-caption text-charcoal-faint">
             Need to step away?{" "}
-            <Link href="/" className="text-terracotta font-semibold">
+            <Link href="/" className="text-terracotta-deep font-bold">
               Back to the directory
             </Link>
           </p>
@@ -253,13 +259,7 @@ export default async function ProviderDashboard({
   );
 }
 
-function WhatsAppGlyph() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.13h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.36c0-4.54 3.7-8.23 8.25-8.23 2.2 0 4.27.86 5.83 2.41a8.19 8.19 0 0 1 2.41 5.83c0 4.54-3.7 8.21-8.24 8.21Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.24-.64.8-.78.97-.15.16-.29.18-.54.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.09-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.16 0-.43.06-.65.31-.22.25-.85.83-.85 2.03 0 1.2.87 2.35.99 2.51.12.16 1.71 2.61 4.15 3.66.58.25 1.03.4 1.39.51.58.19 1.11.16 1.53.1.47-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.17-.47-.29Z" />
-    </svg>
-  );
-}
+const WhatsAppGlyph = () => <WhatsApp size={15} />;
 
 function LeadCard({
   lead,
@@ -281,7 +281,7 @@ function LeadCard({
     <Card className="p-4">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] text-charcoal-faint font-mono tracking-wide mb-1">
+          <p className="text-caption text-charcoal-faint font-mono tracking-wide mb-1">
             {lead.ref}
             {lead.status === "new" && (
               <span className="ml-2 font-sans not-italic">
@@ -289,8 +289,8 @@ function LeadCard({
               </span>
             )}
           </p>
-          <p className="text-[15px] leading-snug m-0 mb-2">“{lead.message}”</p>
-          <p className="text-[12.5px] text-charcoal-soft">
+          <p className="text-body leading-snug m-0 mb-2">“{lead.message}”</p>
+          <p className="text-caption text-charcoal-soft">
             {lead.resident_name}
             {lead.resident_flat ? ` · ${lead.resident_flat}` : ""}
             {lead.requested_time ? ` · wants ${lead.requested_time}` : ""}
@@ -301,14 +301,14 @@ function LeadCard({
                 href={waLink(lead.resident_phone, waGreeting(lead, providerName))}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold bg-sage text-white hover:bg-sage-deep"
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-body font-bold bg-sage text-white hover:bg-sage-deep"
               >
                 <WhatsAppGlyph />
                 WhatsApp {lead.resident_name.split(" ")[0]}
               </a>
               <a
                 href={`tel:${lead.resident_phone}`}
-                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta"
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep"
               >
                 Call {lead.resident_phone}
               </a>
@@ -321,7 +321,7 @@ function LeadCard({
             {lead.status === "new" ? "Awaiting you" : lead.status}
           </Badge>
           {lead.charged && (
-            <span className="text-[11px] text-charcoal-faint">
+            <span className="text-caption text-charcoal-faint">
               {rupees(lead.charge_paise)} charged
             </span>
           )}

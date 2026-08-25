@@ -87,7 +87,7 @@ begin
     insert into blocked_attempts (phone, provider_id, message, reason)
       values (v_phone, v_provider, left(trim(p_message), 300), 'rate_limit');
     return jsonb_build_object('ok', false, 'blocked', true,
-      'error', 'That is a lot of requests in one hour. Try again later — and if this is genuine, we will sort it out.');
+      'error', 'Five requests in an hour is the limit here, so the directory stays usable for everyone. Try again shortly.');
   end if;
 
   insert into leads (

@@ -11,8 +11,8 @@ export default function LoginPage() {
       <Nav />
       <Shell>
         <div className="max-w-sm mx-auto py-14">
-          <h1 className="text-[28px] mb-1.5">Provider sign in</h1>
-          <p className="text-charcoal-soft text-sm mb-6">
+          <h1 className="mb-1.5">Provider sign in</h1>
+          <p className="text-charcoal-soft text-body mb-6">
             For people who list their work, and for moderators.
           </p>
           <Suspense fallback={null}>

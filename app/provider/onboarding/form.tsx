@@ -53,7 +53,7 @@ export default function OnboardingForm({
           placeholder="98XXXXXXXX"
         />
         {phone.length > 0 && phone.length < 10 && (
-          <span className="block mt-1 text-[11.5px] text-charcoal-faint">
+          <span className="block mt-1 text-caption text-charcoal-faint">
             {10 - phone.length} more digit{10 - phone.length === 1 ? "" : "s"}
           </span>
         )}
@@ -109,7 +109,7 @@ export default function OnboardingForm({
       </div>
 
       <div className="border border-sandstone rounded-2xl bg-cream p-4 mb-4">
-        <ul className="text-[12.5px] text-charcoal-soft leading-relaxed space-y-1.5 list-disc pl-4 mb-3.5">
+        <ul className="text-caption text-charcoal-soft leading-relaxed space-y-1.5 list-disc pl-4 mb-3.5">
           {TERMS_PLAIN_SUMMARY.map((s) => (
             <li key={s}>{s}</li>
           ))}
@@ -122,12 +122,12 @@ export default function OnboardingForm({
             onChange={(e) => setAccepted(e.target.checked)}
             className="mt-0.5 w-4 h-4 accent-[#c86840] shrink-0"
           />
-          <span className="text-[13px] leading-snug">
+          <span className="text-body leading-snug">
             I have read and accept the{" "}
             <Link
               href="/terms"
               target="_blank"
-              className="font-semibold text-terracotta underline underline-offset-2"
+              className="font-bold text-terracotta-deep underline underline-offset-2"
             >
               provider agreement
             </Link>
@@ -136,7 +136,7 @@ export default function OnboardingForm({
         </label>
       </div>
 
-      {state.error && <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>}
+      {state.error && <p className="text-body text-terracotta-deep mb-3">{state.error}</p>}
 
       <Submit disabled={!accepted} />
 
@@ -146,7 +146,7 @@ export default function OnboardingForm({
           for requests you accept — ₹20 for one-off work, ₹50 for home services and
           repairs, ₹100 for tuition, classes and events. Every request shows its fee
           before you decide, and declining always costs nothing.{" "}
-          <Link href="/rates" className="underline font-semibold">
+          <Link href="/rates" className="underline font-bold">
             The full rate card
           </Link>
           .

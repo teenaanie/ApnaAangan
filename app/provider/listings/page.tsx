@@ -3,6 +3,7 @@ import Link from "next/link";
 import Nav from "@/components/nav";
 import AddListing from "./add-listing";
 import EditListing from "./edit-listing";
+import AdditionalInfo from "./additional-info";
 import { setListingPaused } from "../actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -81,9 +82,24 @@ export default async function ListingsPage() {
       <Nav subtitle="Provider" />
       <Shell>
         <div className="py-9 max-w-2xl">
-          <h1 className="text-[27px] mb-1">Your listings</h1>
-          <p className="text-charcoal-soft text-sm mb-6">
-            {liveCount} of {listings.length} visible to neighbours right now.
+          <div className="flex flex-wrap items-start gap-3 mb-1">
+            <h1 className="m-0">Your listings</h1>
+            <div className="flex-1" />
+            <Link
+              href={`/p/${provider.public_id}`}
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+            >
+              View my page →
+            </Link>
+          </div>
+          <p className="text-charcoal-soft text-body mb-6">
+            {liveCount} of {listings.length} visible to neighbours right now.{" "}
+            <Link
+              href="/provider/share"
+              className="font-bold text-terracotta-deep underline underline-offset-2"
+            >
+              Share your link and QR code
+            </Link>
           </p>
 
           {accountOff && (
@@ -93,7 +109,7 @@ export default async function ListingsPage() {
                   <>
                     <b>Everything is paused.</b> None of these are visible, whatever
                     each one says below. Resume from{" "}
-                    <Link href="/provider" className="underline font-semibold">
+                    <Link href="/provider" className="underline font-bold">
                       your dashboard
                     </Link>{" "}
                     to put the ones marked Live back in the directory.
@@ -115,7 +131,10 @@ export default async function ListingsPage() {
 
           <SectionHeader>Everything you offer · {listings.length}</SectionHeader>
           {listings.length === 0 ? (
-            <Empty title="Nothing listed yet">Add your first below.</Empty>
+            <Empty title="Nothing listed yet">
+              Add what you make, teach or fix below. You can add more later, and
+              edit any of them whenever you like.
+            </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {listings.map((l) => {
@@ -133,21 +152,21 @@ export default async function ListingsPage() {
                     className={`p-4 ${v.live ? "" : "bg-cream/60"}`}
                   >
                     <div className="flex items-start gap-3">
-                      <span className={`text-xl leading-none ${v.live ? "" : "opacity-50"}`}>
+                      <span className={`text-icon leading-none ${v.live ? "" : "opacity-50"}`}>
                         {l.icon}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-[15px] font-semibold m-0 text-charcoal">
+                        <h3 className="text-body font-bold m-0 text-charcoal">
                           {l.title}
                         </h3>
                         {l.description && (
-                          <p className="text-[13px] text-charcoal-soft mt-1 leading-snug">
+                          <p className="text-body text-charcoal-soft mt-1 leading-snug">
                             {l.description}
                           </p>
                         )}
                         <div className="flex gap-2 mt-2 flex-wrap items-center">
                           {l.price_from != null && (
-                            <span className="text-[13px] font-bold">
+                            <span className="text-body font-bold">
                               ₹{l.price_from.toLocaleString("en-IN")}{" "}
                               <span className="font-normal text-charcoal-faint">
                                 {l.price_unit}
@@ -157,7 +176,7 @@ export default async function ListingsPage() {
                           {l.availability && <Badge>{l.availability}</Badge>}
                         </div>
                         {(l.keywords?.length ?? 0) > 0 && (
-                          <p className="text-[11.5px] text-charcoal-faint mt-1.5">
+                          <p className="text-caption text-charcoal-faint mt-1.5">
                             Also found by: {l.keywords!.join(", ")}
                           </p>
                         )}
@@ -166,7 +185,7 @@ export default async function ListingsPage() {
                       <div className="text-right shrink-0">
                         <Badge tone={v.live ? "sage" : "mustard"}>{v.label}</Badge>
                         {v.why && (
-                          <p className="text-[11px] text-charcoal-faint mt-1 max-w-[130px]">
+                          <p className="text-caption text-charcoal-faint mt-1 max-w-[130px]">
                             {v.why}
                           </p>
                         )}
@@ -189,7 +208,7 @@ export default async function ListingsPage() {
                         <Button type="submit" variant={paused ? "sage" : "ghost"}>
                           {paused ? "Resume this listing" : "Pause this one"}
                         </Button>
-                        <span className="text-[11.5px] text-charcoal-faint flex-1 min-w-[180px]">
+                        <span className="text-caption text-charcoal-faint flex-1 min-w-[180px]">
                           {paused
                             ? "Nobody can see or request this. Your other listings are unaffected."
                             : "Stops this one only — useful in exam week, or when an oven is being repaired."}
@@ -208,14 +227,22 @@ export default async function ListingsPage() {
               <div className="grid gap-2 mb-9">
                 {archived.map((l) => (
                   <Card key={l.id} className="p-3 flex items-center gap-3 bg-cream/60">
-                    <span className="text-lg opacity-40">{l.icon}</span>
-                    <span className="text-[13.5px] text-charcoal-soft flex-1">{l.title}</span>
+                    <span className="text-icon opacity-40">{l.icon}</span>
+                    <span className="text-body text-charcoal-soft flex-1">{l.title}</span>
                     <Badge>Removed</Badge>
                   </Card>
                 ))}
               </div>
             </>
           )}
+
+          <SectionHeader>Additional info</SectionHeader>
+          <div className="mb-9">
+            <AdditionalInfo
+              live={provider.additional_info}
+              pending={provider.additional_info_pending}
+            />
+          </div>
 
           <SectionHeader>Add another</SectionHeader>
           <AddListing categories={categories} />

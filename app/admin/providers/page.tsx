@@ -80,16 +80,16 @@ export default async function AdminProviders({
       <Shell>
         <div className="py-9">
           <div className="flex flex-wrap items-start gap-3 mb-1">
-            <h1 className="text-[27px] m-0">Providers</h1>
+            <h1 className="m-0">Providers</h1>
             <div className="flex-1" />
             <Link
               href="/admin"
-              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
               Approvals and requests →
             </Link>
           </div>
-          <p className="text-charcoal-soft text-sm mb-6">
+          <p className="text-charcoal-soft text-body mb-6">
             {rows.length} listed across {groups.length} societ
             {groups.length === 1 ? "y" : "ies"} · {rupees(owedTotal)} outstanding in
             total.
@@ -111,7 +111,9 @@ export default async function AdminProviders({
             ))}
           </div>
 
-          {shown.length === 0 && <Empty title="Nobody here yet" />}
+          {shown.length === 0 && <Empty title="Nobody here yet">
+              Providers appear under their society as soon as they are approved.
+            </Empty>}
 
           {shown.map(([id, g]) => (
             <section key={id} className="mb-9">
@@ -144,10 +146,10 @@ function FilterChip({
   return (
     <Link
       href={href}
-      className={`shrink-0 whitespace-nowrap text-[13px] font-semibold px-3.5 py-2 rounded-full border transition ${
+      className={`shrink-0 whitespace-nowrap text-body font-bold px-3.5 py-2 rounded-full border transition ${
         on
-          ? "bg-charcoal text-white border-charcoal"
-          : "bg-surface border-sandstone hover:border-charcoal-faint"
+          ? "bg-mustard text-white border-mustard"
+          : "bg-surface border-sandstone hover:border-terracotta"
       }`}
     >
       {children}
@@ -190,19 +192,19 @@ function ProviderRow({ r }: { r: Row }) {
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold text-[15px] m-0">{r.display_name}</p>
+            <p className="font-bold text-body m-0">{r.display_name}</p>
             <Badge tone={TONE[r.status] ?? "neutral"}>{LABEL[r.status] ?? r.status}</Badge>
             {r.is_demo && <Badge>demo</Badge>}
             {atLimit && <Badge tone="mustard">at limit — can&rsquo;t accept</Badge>}
           </div>
-          <p className="text-[12px] text-charcoal-faint font-mono mt-0.5">{r.public_id}</p>
-          <p className="text-[12.5px] text-charcoal-soft mt-1.5">
+          <p className="text-caption text-charcoal-faint font-mono mt-0.5">{r.public_id}</p>
+          <p className="text-caption text-charcoal-soft mt-1.5">
             {r.leads_accepted} accepted of {r.leads_total} · {r.free_leads_remaining}{" "}
             free left · <b className="text-charcoal">{rupees(r.balance_paise)}</b>{" "}
             outstanding of {rupees(limit)}
           </p>
           {r.status_note && (
-            <p className="text-[12px] text-mustard mt-1">{r.status_note}</p>
+            <p className="text-caption text-mustard mt-1">{r.status_note}</p>
           )}
         </div>
 
@@ -216,13 +218,13 @@ function ProviderRow({ r }: { r: Row }) {
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center rounded-full px-3 py-1.5 text-[12.5px] font-semibold border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
+                className="inline-flex items-center rounded-full px-3 py-1.5 text-caption font-bold border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
               >
                 WhatsApp
               </a>
               <a
                 href={`tel:${phone}`}
-                className="inline-flex items-center rounded-full px-3 py-1.5 text-[12.5px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta transition"
+                className="inline-flex items-center rounded-full px-3 py-1.5 text-caption font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
               >
                 {phone}
               </a>
@@ -258,7 +260,7 @@ function ProviderRow({ r }: { r: Row }) {
       <form action={setCreditLimit} className="mt-2 flex items-end gap-2">
         <input type="hidden" name="id" value={r.id} />
         <label className="block">
-          <span className="block text-[11px] font-bold mb-1 text-charcoal-faint">
+          <span className="block text-caption font-bold mb-1 text-charcoal-faint">
             Credit limit (₹)
           </span>
           <input

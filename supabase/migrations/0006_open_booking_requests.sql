@@ -80,7 +80,7 @@ begin
      and created_at > now() - interval '1 hour';
 
   if v_recent >= 5 then
-    raise exception 'That is a lot of requests in one hour. Try again a little later.'
+    raise exception 'Five requests in an hour is the limit here, so the directory stays usable for everyone. Try again shortly.'
       using errcode = 'check_violation';
   end if;
 

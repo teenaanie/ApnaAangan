@@ -31,12 +31,12 @@ export default function SocietySelect({
   }
 
   return (
-    <label className="inline-flex items-center gap-2 text-[13px]">
+    <label className="inline-flex items-center gap-2 text-body">
       <span className="text-charcoal-soft">Society</span>
       <select
         value={current ?? ""}
         onChange={(e) => go(e.target.value)}
-        className="rounded-full border border-sandstone bg-surface px-3.5 py-2 text-[13px] font-semibold outline-none focus:border-terracotta cursor-pointer"
+        className="rounded-full border border-sandstone bg-surface px-3.5 py-2 text-body font-bold outline-none focus:border-terracotta cursor-pointer"
         aria-label="Filter by society"
       >
         <option value="">All societies</option>

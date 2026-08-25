@@ -62,7 +62,7 @@ export default function EditSociety({ society }: { society: Society }) {
         <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
           Edit
         </Button>
-        {state.ok && <span className="text-[12px] text-sage-deep">{state.ok}</span>}
+        {state.ok && <span className="text-caption text-sage-deep">{state.ok}</span>}
       </div>
     );
   }
@@ -75,7 +75,7 @@ export default function EditSociety({ society }: { society: Society }) {
       <input type="hidden" name="id" value={society.id} />
 
       <label className="block flex-1 min-w-[150px]">
-        <span className="block text-[11px] font-bold mb-1">Name</span>
+        <span className="block text-caption font-bold mb-1">Name</span>
         <input
           name="name" required value={v.name} onChange={set("name")}
           className={`${inputClass} py-1.5`}
@@ -83,7 +83,7 @@ export default function EditSociety({ society }: { society: Society }) {
       </label>
 
       <label className="block flex-1 min-w-[130px]">
-        <span className="block text-[11px] font-bold mb-1">Area</span>
+        <span className="block text-caption font-bold mb-1">Area</span>
         <input
           name="area" value={v.area} onChange={set("area")}
           className={`${inputClass} py-1.5`}
@@ -91,7 +91,7 @@ export default function EditSociety({ society }: { society: Society }) {
       </label>
 
       <label className="block w-[100px]">
-        <span className="block text-[11px] font-bold mb-1">Pincode</span>
+        <span className="block text-caption font-bold mb-1">Pincode</span>
         <input
           name="pincode" inputMode="numeric" maxLength={6}
           value={v.pincode} onChange={set("pincode")}
@@ -100,7 +100,7 @@ export default function EditSociety({ society }: { society: Society }) {
       </label>
 
       <label className="block w-full">
-        <span className="block text-[11px] font-bold mb-1">Google Maps link</span>
+        <span className="block text-caption font-bold mb-1">Google Maps link</span>
         <input
           name="map_url" type="url" value={v.map_url} onChange={set("map_url")}
           className={`${inputClass} py-1.5`}
@@ -109,7 +109,7 @@ export default function EditSociety({ society }: { society: Society }) {
       </label>
 
       {state.error && (
-        <p className="w-full text-[12px] text-terracotta-deep m-0">{state.error}</p>
+        <p className="w-full text-caption text-terracotta-deep m-0">{state.error}</p>
       )}
 
       <div className="flex gap-2">

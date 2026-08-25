@@ -29,15 +29,15 @@ export default function Terms() {
       <Nav subtitle="Provider agreement" />
       <Shell>
         <div className="max-w-[70ch] py-9">
-          <p className="section-header mb-3">Vendor listing agreement</p>
-          <h1 className="text-[30px] leading-[1.15] mb-3">
+          <p className="text-caption text-charcoal-faint mb-2">Vendor listing agreement</p>
+          <h1 className="mb-3">
             The terms of being listed on Aangan.
           </h1>
           <p className="text-charcoal-soft leading-relaxed mb-5">{TERMS_INTRO}</p>
 
           <Card className="p-5 mb-8">
-            <p className="text-[12.5px] font-bold mb-2.5">The whole thing in five lines</p>
-            <ul className="text-[13px] text-charcoal-soft leading-relaxed space-y-1.5 list-disc pl-4">
+            <p className="text-caption font-bold mb-2.5">The whole thing in five lines</p>
+            <ul className="text-body text-charcoal-soft leading-relaxed space-y-1.5 list-disc pl-4">
               {TERMS_PLAIN_SUMMARY.map((s) => (
                 <li key={s}>{s}</li>
               ))}
@@ -46,14 +46,14 @@ export default function Terms() {
 
           {TERMS.map((c) => (
             <section key={c.n} className="mb-7">
-              <h2 className="text-[18px] mb-2">
+              <h2 className="mb-2">
                 <span className="text-charcoal-faint font-normal mr-2">{c.n}.</span>
                 {c.title}
               </h2>
               {c.body.map((p, i) => (
                 <p
                   key={i}
-                  className="text-[14px] text-charcoal-soft leading-relaxed mb-2.5"
+                  className="text-body text-charcoal-soft leading-relaxed mb-2.5"
                 >
                   {p}
                 </p>
@@ -69,11 +69,11 @@ export default function Terms() {
               this matters to you, have someone look at it before you accept.
             </Note>
 
-            <p className="text-[12px] text-charcoal-faint mt-4 leading-relaxed">
+            <p className="text-caption text-charcoal-faint mt-4 leading-relaxed">
               Version {TERMS_VERSION} · effective {TERMS_EFFECTIVE}. You accept these
               terms when you submit your listing, and the version you accepted is
               recorded against your provider record.{" "}
-              <Link href="/faq" className="underline hover:text-terracotta">
+              <Link href="/faq" className="underline hover:text-terracotta-deep">
                 Resident questions
               </Link>
             </p>

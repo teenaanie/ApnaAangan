@@ -1,0 +1,59 @@
+@theme {
+  /* --- the six guideline colours. Do not edit these six lines. --- */
+  --color-terracotta:      #c86840;   /* primary */
+  --color-sage:            #6d7552;   /* primary */
+  --color-mustard:         #7a4900;   /* notifications, badges, ACTIVE STATES, CTA highlights, progress */
+  --color-cream:           #f8f1e3;   /* backgrounds, cards, layout canvas, light UI surfaces */
+  --color-sandstone:       #d8c39f;   /* secondary backgrounds, dividers and borders, fills, hovers */
+  --color-charcoal:        #333433;   /* body text, navigation, icons, footer, dark UI */
+
+  /* --- derived. Not in the guideline; replace when a designer supplies real
+         states. See brand/references/colour.md. --- */
+  --color-terracotta-deep: #a34f2d;   /* terracotta is 3.39:1 on cream and fails
+                                         as body text — every terracotta word
+                                         under 24px uses this instead (5.03:1) */
+  --color-terracotta-tint: #f6e5db;
+  --color-sage-deep:       #545b3e;
+  --color-sage-tint:       #e8ebe0;
+  --color-mustard-tint:    #f7ecd4;
+  --color-sandstone-soft:  #e8dcc4;   /* hairline borders, inset fills, hovers */
+  --color-charcoal-soft:   #5e5f5c;
+  --color-charcoal-faint:  #8b8c88;   /* 11–12px supplementary text only — 3.01:1 */
+
+  /* The card fill. The guideline has no white in it: cream is named for
+     backgrounds AND cards AND "light UI surfaces", so a card is the same cream
+     as the page, separated by a sandstone border rather than by being brighter.
+     This was #fffdf9 until 25 Aug 2026. Flip this one line back if the lift is
+     wanted — nothing else changes. */
+  --color-surface:         #f8f1e3;
+
+  --font-display: "ITC Souvenir", "Souvenir", Fraunces, Georgia, "Times New Roman", serif;
+  --font-body: "ITC Avant Garde Gothic", "Century Gothic", Poppins, ui-sans-serif, system-ui, sans-serif;
+
+  /* --- the hierarchy sheet's six sizes. There are no others. ---------------
+     90 Title · 32 Heading · 22 Section Header · 18 Subheading · 15 Body ·
+     12 Subtitle/Quote/Caption. Only the top two are Souvenir; everything at
+     22 and below is Avant Garde. If you find yourself wanting 13px or 14px,
+     the answer is that the role is Body (15) or Caption (12) — pick which.
+
+     Line heights are ours; the sheet gives sizes only.
+     Title's clamp is ours too: 90px is a slide cover, and a phone is not. */
+  --text-title:      clamp(40px, 8.5vw, 90px);
+  --text-title--line-height: 1.05;
+  --text-heading:    32px;
+  --text-heading--line-height: 1.15;
+  --text-section:    22px;
+  --text-section--line-height: 1.25;
+  --text-subheading: 18px;
+  --text-subheading--line-height: 1.35;
+  --text-body:       15px;
+  --text-body--line-height: 1.55;
+  --text-caption:    12px;
+  --text-caption--line-height: 1.45;
+
+  /* Category emoji in icon wells. Pictures, not type — outside the scale. */
+  --text-icon:       20px;
+  --text-icon-lg:    30px;
+
+  --radius-card: 16px;
+}

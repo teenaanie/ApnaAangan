@@ -72,7 +72,7 @@ export default function BookingForm({
           placeholder="98XXXXXXXX"
         />
         {phone.length > 0 && phone.length < 10 && (
-          <span className="block mt-1 text-[11.5px] text-charcoal-faint">
+          <span className="block mt-1 text-caption text-charcoal-faint">
             {10 - phone.length} more digit{10 - phone.length === 1 ? "" : "s"}
           </span>
         )}
@@ -96,7 +96,7 @@ export default function BookingForm({
       </Field>
 
       {state.error && (
-        <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>
+        <p className="text-body text-terracotta-deep mb-3">{state.error}</p>
       )}
 
       <Submit />

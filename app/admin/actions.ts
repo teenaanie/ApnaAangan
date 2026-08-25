@@ -308,3 +308,24 @@ export async function renameSociety(
   revalidatePath("/");
   return { ok: "Saved." };
 }
+
+/**
+ * Publish or reject a provider's proposed "Additional info".
+ *
+ * Rejecting does not blank their page — whatever was already approved stays
+ * up. The only thing a rejection removes is the proposal.
+ */
+export async function decideAdditionalInfo(formData: FormData) {
+  const id = String(formData.get("id") || "");
+  const approve = String(formData.get("approve") || "") === "yes";
+  if (!id) return;
+
+  const supabase = await assertAdmin();
+  await supabase.rpc("decide_additional_info", {
+    p_provider_id: id,
+    p_approve: approve,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}

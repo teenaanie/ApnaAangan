@@ -15,8 +15,8 @@ export default function Faq() {
       <Nav subtitle="Questions" />
       <Shell>
         <section className="pt-9 pb-7 max-w-[62ch]">
-          <p className="section-header mb-3">For residents</p>
-          <h1 className="text-[30px] sm:text-[34px] leading-[1.15] mb-3">
+          <p className="text-caption text-charcoal-faint mb-2">For residents</p>
+          <h1 className="mb-3">
             How this works, in plain terms.
           </h1>
           <p className="text-charcoal-soft leading-relaxed">
@@ -31,8 +31,8 @@ export default function Faq() {
             <div className="grid gap-3 sm:grid-cols-2">
               {section.items.map((item) => (
                 <Card key={item.q} className="p-4">
-                  <h2 className="text-[14.5px] font-semibold m-0 mb-1.5">{item.q}</h2>
-                  <p className="text-[13px] text-charcoal-soft leading-relaxed m-0">
+                  <h3 className="text-body font-bold m-0 mb-1.5">{item.q}</h3>
+                  <p className="text-body text-charcoal-soft leading-relaxed m-0">
                     {item.a}
                   </p>
                 </Card>
@@ -43,8 +43,8 @@ export default function Faq() {
 
         <section className="py-10">
           <Card className="p-6 sm:p-8 bg-sage-tint border-sage/25">
-            <h2 className="text-[22px] mb-1.5">Do you make, teach or fix something?</h2>
-            <p className="text-[13.5px] text-charcoal-soft max-w-[58ch] leading-relaxed mb-5">
+            <h2 className="mb-1.5">Do you make, teach or fix something?</h2>
+            <p className="text-body text-charcoal-soft max-w-[58ch] leading-relaxed mb-5">
               Listing is free, and you get a page of your own plus a QR code you can
               send to the customers you already have. It takes about two minutes.
             </p>

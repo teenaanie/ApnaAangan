@@ -1,6 +1,14 @@
 /** Brand constants from the Aangan brand guideline. */
 export const BRAND = {
-  /** The wordmark, shown in the header, page titles and share cards. */
+  /**
+   * The wordmark, shown in the header, page titles and share cards.
+   *
+   * The brand guideline's logo sheets still set the wordmark as "Aangan".
+   * Confirmed 25 August 2026 that this is the guideline being out of date, not
+   * the name: it is "Apna Aangan", and the logo artwork needs redrawing to
+   * match. Everything in the app reads this one constant, so the app was
+   * already correct.
+   */
   name: "Apna Aangan",
   /** The short form, for use inside sentences where the full name would drag. */
   shortName: "Aangan",

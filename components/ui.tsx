@@ -1,34 +1,12 @@
 import Link from "next/link";
 import type { ReactNode, ButtonHTMLAttributes } from "react";
-import { BRAND } from "@/lib/brand";
 
 /* ------------------------------------------------------------------ brand -- */
 
-export function Mark({ className = "w-8 h-8" }: { className?: string }) {
-  // The Aangan mark: four homes around a shared courtyard.
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/aangan-mark.svg" alt="" aria-hidden className={className} />
-  );
-}
-
-export function Logo({ href = "/", subtitle }: { href?: string; subtitle?: string }) {
-  return (
-    <Link href={href} className="flex items-center gap-2.5 shrink-0">
-      <Mark className="w-[32px] h-[32px] sm:w-[38px] sm:h-[38px]" />
-      <span className="leading-none">
-        <span className="display block text-[18px] sm:text-[21px] text-terracotta font-semibold tracking-tight whitespace-nowrap">
-          {BRAND.name}
-        </span>
-        {subtitle && (
-          <span className="block text-[10px] uppercase tracking-[0.14em] text-charcoal-faint mt-0.5">
-            {subtitle}
-          </span>
-        )}
-      </span>
-    </Link>
-  );
-}
+/* The mark and the lockups now live in components/logo.tsx, built to the
+   guideline's construction grid. Re-exported here so existing imports keep
+   working and there is still one obvious place to look. */
+export { Logo, Mark, Wordmark, LOGO_MIN } from "@/components/logo";
 
 /* ----------------------------------------------------------------- layout -- */
 
@@ -52,15 +30,23 @@ export function Card({
   );
 }
 
+/**
+ * The hierarchy sheet's Section Header: ITC Avant Garde Gothic Bold at 22pt.
+ *
+ * This used to be a 13px uppercase letter-spaced label in charcoal-faint — an
+ * eyebrow, which is a different thing entirely and two steps down the scale
+ * from where the guideline puts it. Renders as a real <h2> so the document
+ * outline matches what a reader sees.
+ */
 export function SectionHeader({ children }: { children: ReactNode }) {
-  return <p className="section-header mb-3">{children}</p>;
+  return <h2 className="mb-3">{children}</h2>;
 }
 
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="text-center py-14 px-6 border border-dashed border-sandstone rounded-2xl bg-surface/50">
-      <p className="display text-lg text-mustard mb-1">{title}</p>
-      <p className="text-sm text-charcoal-soft max-w-sm mx-auto">{children}</p>
+      <p className="display text-subheading text-mustard mb-1">{title}</p>
+      <p className="text-body text-charcoal-soft max-w-sm mx-auto">{children}</p>
     </div>
   );
 }
@@ -73,13 +59,13 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const btnBase =
-  "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-body font-bold transition disabled:opacity-50 disabled:cursor-not-allowed";
 
 const btnVariants: Record<string, string> = {
   primary: "bg-terracotta text-white hover:bg-terracotta-deep",
   sage: "bg-sage text-white hover:bg-sage-deep",
-  ghost: "border border-sandstone bg-surface text-charcoal hover:border-charcoal-faint",
-  danger: "border border-sandstone bg-surface text-charcoal-soft hover:border-terracotta hover:text-terracotta",
+  ghost: "border border-sandstone bg-surface text-charcoal hover:border-terracotta",
+  danger: "border border-sandstone bg-surface text-charcoal-soft hover:border-terracotta hover:text-terracotta-deep",
 };
 
 export function Button({ variant = "primary", full, className = "", ...rest }: BtnProps) {
@@ -120,7 +106,7 @@ export function Field({
 }) {
   return (
     <label className="block mb-4">
-      <span className="block text-[13px] font-bold mb-1.5">
+      <span className="block text-body font-bold mb-1.5">
         {label}
         {hint && <span className="ml-1.5 font-normal text-charcoal-faint">{hint}</span>}
       </span>
@@ -129,13 +115,16 @@ export function Field({
   );
 }
 
+/* A field is a "subtle UI fill", which the guideline gives to sandstone. It sits
+   a step darker than the cream card and lifts back to cream on focus — the
+   usual light-on-focus behaviour, done inside the palette instead of with grey. */
 export const inputClass =
-  "w-full px-3 py-2.5 rounded-xl border border-sandstone bg-cream focus:bg-surface focus:border-terracotta outline-none text-[15px]";
+  "w-full px-3 py-2.5 rounded-xl border border-sandstone bg-sandstone-soft focus:bg-cream focus:border-terracotta outline-none text-body";
 
 /* ----------------------------------------------------------------- badges -- */
 
 const badgeTones: Record<string, string> = {
-  neutral: "bg-cream-deep border-sandstone text-charcoal-soft",
+  neutral: "bg-sandstone-soft border-sandstone text-charcoal-soft",
   terracotta: "bg-terracotta-tint border-terracotta/25 text-terracotta-deep",
   sage: "bg-sage-tint border-sage/25 text-sage-deep",
   mustard: "bg-mustard-tint border-mustard/25 text-mustard",
@@ -150,7 +139,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-full border ${badgeTones[tone]}`}
+      className={`inline-flex items-center gap-1 text-caption font-bold px-2 py-1 rounded-full border ${badgeTones[tone]}`}
     >
       {children}
     </span>
@@ -160,8 +149,8 @@ export function Badge({
 export function Stat({ value, label }: { value: ReactNode; label: string }) {
   return (
     <div>
-      <p className="display text-2xl text-mustard leading-none">{value}</p>
-      <p className="text-[11.5px] text-charcoal-soft mt-1">{label}</p>
+      <p className="display text-section text-mustard leading-none">{value}</p>
+      <p className="text-caption text-charcoal-soft mt-1">{label}</p>
     </div>
   );
 }
@@ -172,7 +161,7 @@ export function Note({ children, tone = "sage" }: { children: ReactNode; tone?: 
       ? "bg-sage-tint border-sage/25 text-sage-deep"
       : "bg-mustard-tint border-mustard/25 text-mustard";
   return (
-    <div className={`text-[12.5px] leading-relaxed border rounded-xl px-3.5 py-3 ${cls}`}>
+    <div className={`text-caption leading-relaxed border rounded-xl px-3.5 py-3 ${cls}`}>
       {children}
     </div>
   );

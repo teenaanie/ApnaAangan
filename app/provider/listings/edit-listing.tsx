@@ -82,7 +82,7 @@ export default function EditListing({
         <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
           Edit
         </Button>
-        {state.ok && <span className="text-[12px] text-sage-deep">{state.ok}</span>}
+        {state.ok && <span className="text-caption text-sage-deep">{state.ok}</span>}
       </div>
     );
   }
@@ -167,7 +167,7 @@ export default function EditListing({
             className={inputClass}
             placeholder="dabba, tiffin, ghar ka khana, lunch box"
           />
-          <span className="block mt-1.5 text-[11.5px] text-charcoal-faint leading-snug">
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
             Words a neighbour might type that aren&rsquo;t in your description —
             other languages, local names, common misspellings. Someone searching
             &ldquo;silai&rdquo; won&rsquo;t find &ldquo;stitching&rdquo; unless you
@@ -197,9 +197,9 @@ export default function EditListing({
         )}
 
         {state.error && (
-          <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>
+          <p className="text-body text-terracotta-deep mb-3">{state.error}</p>
         )}
-        {state.ok && <p className="text-[13px] text-sage-deep mb-3">{state.ok}</p>}
+        {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
 
         <div className="flex flex-wrap gap-2">
           <Save />
@@ -215,14 +215,14 @@ export default function EditListing({
             <button
               type="button"
               onClick={() => setConfirmArchive(true)}
-              className="text-[12px] text-charcoal-faint hover:text-terracotta underline"
+              className="text-caption text-charcoal-faint hover:text-terracotta-deep underline"
             >
               Remove this listing from my menu
             </button>
           ) : (
             <form action={archiveListing} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="listing_id" value={listing.id} />
-              <span className="text-[12.5px] text-charcoal-soft">
+              <span className="text-caption text-charcoal-soft">
                 Remove it? Past requests for it are kept.
               </span>
               <Button type="submit" variant="danger">

@@ -102,8 +102,8 @@ export default function AddListing({ categories }: { categories: Category[] }) {
           />
         </Field>
 
-        {state.error && <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>}
-        {state.ok && <p className="text-[13px] text-sage-deep mb-3">{state.ok}</p>}
+        {state.error && <p className="text-body text-terracotta-deep mb-3">{state.error}</p>}
+        {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
 
         <Submit />
       </form>

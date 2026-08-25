@@ -18,7 +18,7 @@ export default function CopyLink({ url, waText }: { url: string; waText: string 
 
   return (
     <Card className="p-4">
-      <p className="font-mono text-[13.5px] break-all text-terracotta-deep mb-3">{url}</p>
+      <p className="font-mono text-body break-all text-terracotta-deep mb-3">{url}</p>
       <div className="flex gap-2 flex-wrap">
         <Button onClick={copy} variant={copied ? "sage" : "primary"}>
           {copied ? "Copied" : "Copy link"}
@@ -27,7 +27,7 @@ export default function CopyLink({ url, waText }: { url: string; waText: string 
           href={`https://wa.me/?text=${waText}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold border border-sandstone bg-surface hover:border-charcoal-faint"
+          className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-body font-bold border border-sandstone bg-surface hover:border-terracotta"
         >
           Share on WhatsApp
         </a>

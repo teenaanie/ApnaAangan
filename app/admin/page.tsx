@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
-import { moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
+import { decideAdditionalInfo, moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
 import { Badge, Button, Card, Empty, SectionHeader, Shell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
@@ -30,7 +30,7 @@ export default async function AdminPage() {
     // (see moderateProvider); this section is for listings added later, by
     // someone already in the directory.
     supabase.from("listings")
-      .select("id, title, description, status, providers!inner(public_id, display_name, status, provider_contacts(phone))")
+      .select("id, title, description, status, first_approved_at, edited_at, prev_title, prev_description, providers!inner(public_id, display_name, status, provider_contacts(phone))")
       .eq("status", "pending").in("providers.status", ["active", "paused"])
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
@@ -90,6 +90,20 @@ export default async function AdminPage() {
     } | null;
   }>;
 
+  // Additional-info proposals. The live copy stays public while these wait, so
+  // this queue is never urgent — but it is where a phone number would try to
+  // get onto a public page, so it is not optional either.
+  const { data: infoRows } = await supabase
+    .from("providers")
+    .select("id, public_id, display_name, additional_info, additional_info_pending, additional_info_at")
+    .not("additional_info_pending", "is", null)
+    .order("additional_info_at");
+
+  const pendingInfo = (infoRows ?? []) as unknown as Array<{
+    id: string; public_id: string; display_name: string;
+    additional_info: string | null; additional_info_pending: string | null;
+  }>;
+
   const { data: blockedRows } = await supabase
     .from("blocked_attempts")
     .select("id, phone, message, reason, status, created_at, providers(public_id, display_name)")
@@ -109,6 +123,8 @@ export default async function AdminPage() {
   }>;
   const pendingListings = (listingsRes.data ?? []) as unknown as Array<{
     id: string; title: string; description: string | null;
+    first_approved_at: string | null; edited_at: string | null;
+    prev_title: string | null; prev_description: string | null;
     providers: {
       public_id: string; display_name: string;
       provider_contacts: { phone: string }[] | { phone: string } | null;
@@ -134,7 +150,8 @@ export default async function AdminPage() {
   const accepted = all.reduce((s, p) => s + (p.leads_accepted ?? 0), 0);
   const owed = all.reduce((s, p) => s + (p.balance_paise ?? 0), 0);
 
-  const queue = pendingProviders.length + pendingListings.length + pendingUpdates.length;
+  const queue =
+    pendingProviders.length + pendingListings.length + pendingUpdates.length + pendingInfo.length;
 
   return (
     <>
@@ -142,22 +159,22 @@ export default async function AdminPage() {
       <Shell>
         <div className="py-9">
           <div className="flex flex-wrap items-start gap-3">
-            <h1 className="text-[27px] mb-1">Admin</h1>
+            <h1 className="mb-1">Admin</h1>
             <div className="flex-1" />
             <Link
               href="/admin/societies"
-              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
               Societies
             </Link>
             <Link
               href="/admin/providers"
-              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
               All providers, by society →
             </Link>
           </div>
-          <p className="text-charcoal-soft text-sm mb-6">
+          <p className="text-charcoal-soft text-body mb-6">
             With no committee in the loop, moderation is entirely yours. Review every
             listing for the first few months — it is tedious and it is the only thing
             that works at this size.
@@ -197,7 +214,7 @@ export default async function AdminPage() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-[15px] m-0">
+                        <p className="font-bold text-body m-0">
                           {w.providers?.display_name ?? "Unknown provider"}
                         </p>
                         <Badge tone={stale ? "mustard" : "neutral"}>{waitedLabel(hours)}</Badge>
@@ -206,14 +223,14 @@ export default async function AdminPage() {
                         )}
                         {!phone && <Badge>no phone on file</Badge>}
                       </div>
-                      <p className="text-[12px] text-charcoal-faint font-mono mt-0.5">
+                      <p className="text-caption text-charcoal-faint font-mono mt-0.5">
                         {w.ref} · {w.providers?.public_id}
                       </p>
-                      <p className="text-[13.5px] leading-snug mt-1.5 m-0">
+                      <p className="text-body leading-snug mt-1.5 m-0">
                         {w.resident_name} asked: “{w.message}”
                       </p>
                       {w.requested_time && (
-                        <p className="text-[12px] text-charcoal-soft mt-1">
+                        <p className="text-caption text-charcoal-soft mt-1">
                           Wanted for {w.requested_time}
                         </p>
                       )}
@@ -234,26 +251,26 @@ export default async function AdminPage() {
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-sage text-white hover:bg-sage-deep transition"
+                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-body font-bold bg-sage text-white hover:bg-sage-deep transition"
                         >
                           Remind on WhatsApp
                         </a>
                         <a
                           href={`tel:${phone}`}
-                          className="inline-flex items-center rounded-full px-3.5 py-2 text-[13px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta transition"
+                          className="inline-flex items-center rounded-full px-3.5 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
                         >
                           Call
                         </a>
                       </div>
                     ) : (
-                      <p className="text-[12px] text-charcoal-faint max-w-[180px]">
+                      <p className="text-caption text-charcoal-faint max-w-[180px]">
                         No number stored, so there is no way to reach them from here.
                       </p>
                     )}
                   </Card>
                 );
               })}
-              <p className="text-[11.5px] text-charcoal-faint">
+              <p className="text-caption text-charcoal-faint">
                 Highlighted after 12 hours. The message opens in WhatsApp already
                 written — you press send.
               </p>
@@ -268,18 +285,18 @@ export default async function AdminPage() {
               {pendingProviders.map((p) => (
                 <Card key={p.id} className="p-4 flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[15px] m-0">{p.display_name}</p>
-                    <p className="text-[12px] text-charcoal-faint font-mono mt-0.5">{p.public_id}</p>
+                    <p className="font-bold text-body m-0">{p.display_name}</p>
+                    <p className="text-caption text-charcoal-faint font-mono mt-0.5">{p.public_id}</p>
                     {p.about && (
-                      <p className="text-[13px] text-charcoal-soft mt-1.5">{p.about}</p>
+                      <p className="text-body text-charcoal-soft mt-1.5">{p.about}</p>
                     )}
 
                     {(p.listings ?? []).filter((l) => l.status === "pending").map((l) => (
                       <div
                         key={l.id}
-                        className="mt-2.5 pl-3 border-l-2 border-sandstone text-[13px]"
+                        className="mt-2.5 pl-3 border-l-2 border-sandstone text-body"
                       >
-                        <p className="font-semibold m-0">{l.title}</p>
+                        <p className="font-bold m-0">{l.title}</p>
                         {l.description && (
                           <p className="text-charcoal-soft leading-snug mt-0.5 m-0">
                             {l.description}
@@ -294,7 +311,7 @@ export default async function AdminPage() {
                       context="about your listing on Aangan"
                     />
 
-                    <p className="text-[11.5px] text-charcoal-faint mt-2.5">
+                    <p className="text-caption text-charcoal-faint mt-2.5">
                       Approving publishes this provider and the listing
                       {(p.listings ?? []).filter((l) => l.status === "pending").length === 1 ? "" : "s"}{" "}
                       above. Rejecting removes both from the queue.
@@ -317,25 +334,83 @@ export default async function AdminPage() {
             </div>
           )}
 
-          <SectionHeader>Listings awaiting approval · {pendingListings.length}</SectionHeader>
+          <SectionHeader>
+            Listings awaiting approval · {pendingListings.length}
+            {pendingListings.length > 0 && (
+              <span className="ml-2 font-normal normal-case tracking-normal text-charcoal-faint">
+                {pendingListings.filter((l) => l.first_approved_at).length} edited,{" "}
+                {pendingListings.filter((l) => !l.first_approved_at).length} new
+              </span>
+            )}
+          </SectionHeader>
           {pendingListings.length === 0 ? (
-            <Empty title="Nothing waiting" />
+            <Empty title="No listings waiting">
+              Listings added by providers who are already live queue up here.
+            </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {pendingListings.map((l) => (
                 <Card key={l.id} className="p-4 flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[15px] m-0">{l.title}</p>
-                    <p className="text-[12px] text-charcoal-faint mt-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {l.first_approved_at ? (
+                        <Badge tone="mustard">Edited — was live</Badge>
+                      ) : (
+                        <Badge tone="sage">New listing</Badge>
+                      )}
+                      <p className="font-bold text-body m-0">{l.title}</p>
+                    </div>
+                    <p className="text-caption text-charcoal-faint mt-0.5">
                       {l.providers?.display_name} · {l.providers?.public_id}
+                      {l.first_approved_at && (
+                        <> · live since {monthYear(l.first_approved_at)}, off the
+                        directory until you decide</>
+                      )}
                     </p>
                     <ContactRow
                       phone={providerPhone(l.providers)}
                       name={l.providers?.display_name ?? "there"}
                       context="about the listing you just added on Aangan"
                     />
-                    {l.description && (
-                      <p className="text-[13px] text-charcoal-soft mt-1.5">{l.description}</p>
+                    {l.prev_title !== null || l.prev_description !== null ? (
+                      /* An edit is judged against what was published, so show
+                         both. Without this the moderator is approving a diff
+                         with one side missing. */
+                      <div className="mt-2.5 grid sm:grid-cols-2 gap-2.5">
+                        <div className="rounded-xl border border-sandstone-soft bg-cream/70 p-2.5">
+                          <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
+                            Was
+                          </p>
+                          <p className="text-body font-bold m-0">{l.prev_title}</p>
+                          {l.prev_description && (
+                            <p className="text-caption text-charcoal-soft mt-1 m-0">
+                              {l.prev_description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="rounded-xl border border-terracotta/30 bg-terracotta-tint/50 p-2.5">
+                          <p className="text-caption uppercase tracking-wider font-bold text-terracotta-deep m-0 mb-1">
+                            Now
+                          </p>
+                          <p className="text-body font-bold m-0">{l.title}</p>
+                          {l.description && (
+                            <p className="text-caption text-charcoal-soft mt-1 m-0">
+                              {l.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      l.description && (
+                        <p className="text-body text-charcoal-soft mt-1.5">{l.description}</p>
+                      )
+                    )}
+
+                    {l.first_approved_at && l.prev_title === null && (
+                      <p className="text-caption text-mustard mt-1.5">
+                        Edited before the previous wording was being kept, so there
+                        is nothing to compare against.
+                      </p>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -357,18 +432,21 @@ export default async function AdminPage() {
 
           <SectionHeader>Updates awaiting screening · {pendingUpdates.length}</SectionHeader>
           {pendingUpdates.length === 0 ? (
-            <Empty title="Nothing waiting" />
+            <Empty title="No updates waiting">
+              Today&rsquo;s menus and offers are screened here before they show
+              on the directory.
+            </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {pendingUpdates.map((u) => (
                 <Card key={u.id} className="p-4 flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[15px] m-0">{u.headline}</p>
-                    <p className="text-[12px] text-charcoal-faint mt-0.5">
+                    <p className="font-bold text-body m-0">{u.headline}</p>
+                    <p className="text-caption text-charcoal-faint mt-0.5">
                       {u.providers?.display_name} · {u.kind}
                     </p>
                     {u.detail && (
-                      <p className="text-[13px] text-charcoal-soft mt-1.5">{u.detail}</p>
+                      <p className="text-body text-charcoal-soft mt-1.5">{u.detail}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -382,6 +460,63 @@ export default async function AdminPage() {
                       <input type="hidden" name="status" value="rejected" />
                       <Button type="submit" variant="danger">Reject</Button>
                     </form>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* ------------------------------------------- additional info */}
+          <SectionHeader>Additional info awaiting approval · {pendingInfo.length}</SectionHeader>
+          {pendingInfo.length === 0 ? (
+            <Empty title="Nothing waiting">
+              Providers describe notice periods, delivery areas and payment here.
+              It is read before it goes public.
+            </Empty>
+          ) : (
+            <div className="grid gap-3 mb-9">
+              {pendingInfo.map((p) => (
+                <Card key={p.id} className="p-4">
+                  <p className="font-bold text-body m-0">{p.display_name}</p>
+                  <p className="text-caption text-charcoal-faint font-mono mt-0.5">
+                    {p.public_id}
+                  </p>
+
+                  <div className="mt-2.5 grid sm:grid-cols-2 gap-2.5">
+                    <div className="rounded-xl border border-sandstone-soft bg-cream/70 p-2.5">
+                      <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
+                        {p.additional_info ? "On their page now" : "Nothing published yet"}
+                      </p>
+                      {p.additional_info && (
+                        <p className="text-caption text-charcoal-soft m-0 whitespace-pre-line">
+                          {p.additional_info}
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-xl border border-terracotta/30 bg-terracotta-tint/50 p-2.5">
+                      <p className="text-caption uppercase tracking-wider font-bold text-terracotta-deep m-0 mb-1">
+                        Proposed
+                      </p>
+                      <p className="text-caption text-charcoal m-0 whitespace-pre-line">
+                        {p.additional_info_pending}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-3">
+                    <form action={decideAdditionalInfo}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="approve" value="yes" />
+                      <Button type="submit" variant="sage">Publish</Button>
+                    </form>
+                    <form action={decideAdditionalInfo}>
+                      <input type="hidden" name="id" value={p.id} />
+                      <input type="hidden" name="approve" value="no" />
+                      <Button type="submit" variant="danger">Reject</Button>
+                    </form>
+                    <span className="text-caption text-charcoal-faint self-center">
+                      Rejecting leaves whatever is already on their page.
+                    </span>
                   </div>
                 </Card>
               ))}
@@ -431,7 +566,7 @@ export default async function AdminPage() {
                   body={u.detail}
                 />
               ))}
-              <p className="text-[11.5px] text-charcoal-faint">
+              <p className="text-caption text-charcoal-faint">
                 The 20 most recent of each. Restoring puts something back in the
                 queue above — it does not publish it.
               </p>
@@ -449,17 +584,17 @@ export default async function AdminPage() {
               {blocked.map((b) => (
                 <Card key={b.id} className="p-4 flex flex-wrap items-start gap-3 border-mustard/30 bg-mustard-tint/40">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[15px] m-0">
+                    <p className="font-bold text-body m-0">
                       {b.phone}
-                      <span className="ml-2 font-normal text-[12px] text-charcoal-soft">
+                      <span className="ml-2 font-normal text-caption text-charcoal-soft">
                         {b.reason === "rate_limit" ? "over the hourly limit" : "already blocked"}
                       </span>
                     </p>
-                    <p className="text-[12px] text-charcoal-faint mt-0.5">
+                    <p className="text-caption text-charcoal-faint mt-0.5">
                       aimed at {b.providers?.display_name ?? "—"} · {b.providers?.public_id ?? ""}
                     </p>
                     {b.message && (
-                      <p className="text-[13px] text-charcoal-soft mt-1.5">“{b.message}”</p>
+                      <p className="text-body text-charcoal-soft mt-1.5">“{b.message}”</p>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -481,16 +616,18 @@ export default async function AdminPage() {
 
           <SectionHeader>Recent requests</SectionHeader>
           {recentLeads.length === 0 ? (
-            <Empty title="No requests yet" />
+            <Empty title="No requests yet">
+              Every booking a resident sends will appear here, newest first.
+            </Empty>
           ) : (
             <Card className="p-1">
               {recentLeads.map((l) => (
                 <div key={l.ref} className="flex items-start gap-3 p-3 border-b border-sandstone-soft last:border-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-mono text-charcoal-faint m-0">
+                    <p className="text-body font-mono text-charcoal-faint m-0">
                       {l.ref} → {l.providers?.public_id}
                     </p>
-                    <p className="text-[13.5px] mt-0.5 truncate">
+                    <p className="text-body mt-0.5 truncate">
                       {l.resident_name}
                       {l.resident_phone ? ` · ${l.resident_phone}` : ""}: “{l.message}”
                     </p>
@@ -511,7 +648,7 @@ export default async function AdminPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Open WhatsApp with a nudge ready to send"
-                      className="shrink-0 text-[11.5px] font-bold px-2 py-1 rounded-full border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
+                      className="shrink-0 text-caption font-bold px-2 py-1 rounded-full border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
                     >
                       Nudge
                     </a>
@@ -520,7 +657,7 @@ export default async function AdminPage() {
                     {l.status}
                   </Badge>
                   {l.charge_paise > 0 && (
-                    <span className="text-[11px] text-charcoal-faint">{rupees(l.charge_paise)}</span>
+                    <span className="text-caption text-charcoal-faint">{rupees(l.charge_paise)}</span>
                   )}
                 </div>
               ))}
@@ -548,11 +685,11 @@ function RejectedCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Badge>{label}</Badge>
-          <p className="font-semibold text-[15px] m-0">{title}</p>
+          <p className="font-bold text-body m-0">{title}</p>
         </div>
-        {sub && <p className="text-[12px] text-charcoal-faint mt-0.5">{sub}</p>}
-        {body && <p className="text-[13px] text-charcoal-soft mt-1.5">{body}</p>}
-        {note && <p className="text-[11.5px] text-charcoal-faint mt-1.5">{note}</p>}
+        {sub && <p className="text-caption text-charcoal-faint mt-0.5">{sub}</p>}
+        {body && <p className="text-body text-charcoal-soft mt-1.5">{body}</p>}
+        {note && <p className="text-caption text-charcoal-faint mt-1.5">{note}</p>}
       </div>
       <form action={restoreRejected}>
         <input type="hidden" name="id" value={id} />
@@ -588,13 +725,13 @@ function ContactRow({
         href={waLink(phone, `Hello ${name}, this is Aangan — ${context}. `)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
+        className="inline-flex items-center rounded-full px-3 py-1 text-caption font-bold border border-sage/30 bg-sage-tint text-sage-deep hover:bg-sage hover:text-white transition"
       >
         WhatsApp
       </a>
       <a
         href={`tel:${phone}`}
-        className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta transition"
+        className="inline-flex items-center rounded-full px-3 py-1 text-caption font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
       >
         {phone}
       </a>
@@ -611,4 +748,8 @@ function waitedLabel(hours: number): string {
   if (hours < 24) return `waiting ${Math.floor(hours)}h`;
   const days = Math.floor(hours / 24);
   return `waiting ${days} day${days === 1 ? "" : "s"}`;
+}
+
+function monthYear(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }

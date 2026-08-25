@@ -327,3 +327,35 @@ function parseKeywords(raw: string): string[] {
   }
   return [...seen];
 }
+
+/**
+ * Propose the "Additional info" text shown on your public page.
+ *
+ * It does not go live on save. This is the field where a phone number would be
+ * smuggled past the lead fee, so a moderator reads it first — but whatever is
+ * already published keeps showing meanwhile, so adding useful detail never
+ * costs a provider their visibility.
+ */
+export async function setAdditionalInfo(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const text = String(formData.get("additional_info") || "").trim();
+  if (text.length > 600) return { error: "Keep it under 600 characters." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_my_additional_info", { p_text: text });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string; queued?: boolean };
+  if (!res?.ok) return { error: res?.error ?? "Could not save that." };
+
+  revalidatePath("/provider/listings");
+  revalidatePath("/provider");
+
+  return {
+    ok: res.queued
+      ? "Saved. A moderator reads it before it appears — usually within a day. What's on your page now stays up until then."
+      : "That matches what's already on your page, so there's nothing to review.",
+  };
+}

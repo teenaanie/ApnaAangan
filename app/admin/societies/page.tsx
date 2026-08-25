@@ -6,6 +6,7 @@ import EditSociety from "./edit-society";
 import { Badge, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
+import { MapPin } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Societies" };
@@ -41,16 +42,16 @@ export default async function Societies() {
       <Shell>
         <div className="py-9 max-w-2xl">
           <div className="flex flex-wrap items-start gap-3 mb-1">
-            <h1 className="text-[27px] m-0">Societies</h1>
+            <h1 className="m-0">Societies</h1>
             <div className="flex-1" />
             <Link
               href="/admin/providers"
-              className="text-[13px] font-semibold text-charcoal-soft hover:text-terracotta"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
               Providers →
             </Link>
           </div>
-          <p className="text-charcoal-soft text-sm mb-6">
+          <p className="text-charcoal-soft text-body mb-6">
             Every society a provider can register under, and that residents can
             filter the directory by.
           </p>
@@ -66,11 +67,11 @@ export default async function Societies() {
                   <Card key={s.id} className="p-4">
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-[15px] m-0">{s.name}</p>
-                        <p className="text-[12.5px] text-charcoal-soft mt-0.5">
+                        <p className="font-bold text-body m-0">{s.name}</p>
+                        <p className="text-caption text-charcoal-soft mt-0.5">
                           {[s.area, s.city, s.pincode].filter(Boolean).join(" · ")}
                         </p>
-                        <p className="text-[11.5px] text-charcoal-faint font-mono mt-1">
+                        <p className="text-caption text-charcoal-faint font-mono mt-1">
                           /?loc={s.slug}
                         </p>
                       </div>
@@ -83,12 +84,12 @@ export default async function Societies() {
                             href={s.map_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[12px] font-semibold text-sage-deep hover:text-terracotta"
+                            className="inline-flex items-center gap-1 text-caption font-bold text-sage-deep hover:text-terracotta-deep"
                           >
                             <PinIcon /> Open in Maps
                           </a>
                         ) : (
-                          <span className="text-[11.5px] text-charcoal-faint">No map link</span>
+                          <span className="text-caption text-charcoal-faint">No map link</span>
                         )}
                       </div>
                     </div>
@@ -117,15 +118,4 @@ export default async function Societies() {
   );
 }
 
-function PinIcon() {
-  return (
-    <svg
-      width="13" height="13" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="2.6" />
-    </svg>
-  );
-}
+const PinIcon = () => <MapPin size={13} />;

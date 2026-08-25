@@ -143,7 +143,7 @@ export default function LoginForm() {
 
   return (
     <>
-      <div className="flex gap-1 p-1 bg-cream-deep rounded-full mb-5 border border-sandstone-soft">
+      <div className="flex gap-1 p-1 bg-sandstone-soft rounded-full mb-5 border border-sandstone-soft">
         {(["signin", "signup"] as const).map((m) => (
           <button
             key={m}
@@ -153,8 +153,10 @@ export default function LoginForm() {
               setError("");
               setHint("");
             }}
-            className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition ${
-              mode === m ? "bg-terracotta text-white" : "text-charcoal-soft hover:text-charcoal"
+            className={`flex-1 rounded-full py-2 text-body font-bold transition ${
+              // Mustard, not terracotta: the guideline gives "active states" to
+              // Dark Mustard, and it is the same treatment the filter chips use.
+              mode === m ? "bg-mustard text-white" : "text-charcoal-soft hover:text-charcoal"
             }`}
           >
             {m === "signin" ? "Sign in" : "Create account"}
@@ -211,9 +213,9 @@ export default function LoginForm() {
 
         {error && (
           <div className="mt-4">
-            <p className="text-[13px] font-semibold text-terracotta-deep mb-2">{error}</p>
+            <p className="text-body font-bold text-terracotta-deep mb-2">{error}</p>
             {hint && (
-              <p className="text-[12px] text-charcoal-soft leading-relaxed">{hint}</p>
+              <p className="text-caption text-charcoal-soft leading-relaxed">{hint}</p>
             )}
           </div>
         )}

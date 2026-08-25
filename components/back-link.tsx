@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ChevronLeft } from "@/components/icons";
 
 /**
  * A way back to the directory from every page except the directory itself.
@@ -18,15 +19,9 @@ export default function BackLink() {
   return (
     <Link
       href="/"
-      className="inline-flex items-center gap-1 shrink-0 text-[12.5px] font-semibold text-charcoal-soft hover:text-terracotta transition"
+      className="inline-flex items-center gap-1 shrink-0 text-caption font-bold text-charcoal-soft hover:text-terracotta-deep transition"
     >
-      <svg
-        width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M15 18l-6-6 6-6" />
-      </svg>
+      <ChevronLeft size={15} />
       <span className="hidden sm:inline">Directory</span>
     </Link>
   );

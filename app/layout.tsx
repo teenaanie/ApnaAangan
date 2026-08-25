@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
+import { Logo } from "@/components/logo";
 import "./globals.css";
 
 /* Stand-ins for the licensed brand fonts, loaded as a plain stylesheet rather
@@ -8,8 +9,11 @@ import "./globals.css";
    reachable, and swapping in the real ITC Souvenir / ITC Avant Garde Gothic
    later means adding @font-face blocks to globals.css and deleting this link —
    nothing else changes, because the CSS stacks already name them first. */
+/* Poppins is loaded at 400 and 700 only, deliberately. ITC Avant Garde Gothic
+   ships Regular and Bold and nothing between, so a semibold is not available to
+   this brand — not loading it is the cheapest way to keep it that way. */
 const GOOGLE_FONTS =
-  "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Poppins:wght@400;500;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Poppins:wght@400;700&display=swap";
 
 export const metadata: Metadata = {
   title: {
@@ -38,20 +42,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <div className="flex-1">{children}</div>
         <footer className="border-t border-sandstone-soft mt-10">
-          <div className="max-w-5xl mx-auto px-4 py-8 text-[12.5px] text-charcoal-soft">
+          <div className="max-w-5xl mx-auto px-4 py-8 text-caption text-charcoal-soft">
             <div className="flex flex-wrap gap-x-5 gap-y-2 items-center">
-              <span className="display text-terracotta text-base">{BRAND.name}</span>
-              <Link href="/" className="hover:text-terracotta">Discover</Link>
-              <Link href="/auth/login?next=/provider/onboarding" className="hover:text-terracotta">
+              <Logo markSize={60} href={null} />
+              <Link href="/" className="hover:text-terracotta-deep">Discover</Link>
+              <Link href="/auth/login?next=/provider/onboarding" className="hover:text-terracotta-deep">
                 List your work
               </Link>
-              <Link href="/faq" className="hover:text-terracotta">
+              <Link href="/faq" className="hover:text-terracotta-deep">
                 How it works
               </Link>
-              <Link href="/terms" className="hover:text-terracotta text-charcoal-faint">
+              <Link href="/terms" className="hover:text-terracotta-deep text-charcoal-faint">
                 Provider agreement
               </Link>
-              <Link href="/auth/login" className="hover:text-terracotta text-charcoal-faint">
+              <Link href="/auth/login" className="hover:text-terracotta-deep text-charcoal-faint">
                 Provider sign in
               </Link>
             </div>

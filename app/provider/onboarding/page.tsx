@@ -23,16 +23,16 @@ export default async function Onboarding() {
       <Nav subtitle="Provider" />
       <Shell>
         <div className="max-w-lg py-10">
-          <h1 className="text-[28px] mb-1.5">List your work</h1>
-          <p className="text-charcoal-soft text-sm mb-7">
+          <h1 className="mb-1.5">List your work</h1>
+          <p className="text-charcoal-soft text-body mb-7">
             Two minutes. A moderator checks it before it goes live, and you get a
             provider ID plus a link you can share with the customers you already have.
           </p>
-          <p className="text-[13px] text-charcoal-soft mb-7 -mt-4">
+          <p className="text-body text-charcoal-soft mb-7 -mt-4">
             Listing is free.{" "}
             <Link
               href="/rates"
-              className="font-semibold text-terracotta underline underline-offset-2 hover:text-terracotta-deep"
+              className="font-bold text-terracotta underline underline-offset-2 hover:text-terracotta-deep"
             >
               What it costs, in full
             </Link>

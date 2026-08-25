@@ -97,13 +97,13 @@ export default function UpdateComposer() {
         )}
 
         {state.error && (
-          <p className="text-[13px] text-terracotta-deep mb-3">{state.error}</p>
+          <p className="text-body text-terracotta-deep mb-3">{state.error}</p>
         )}
-        {state.ok && <p className="text-[13px] text-sage-deep mb-3">{state.ok}</p>}
+        {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
 
         <div className="flex items-center gap-4 flex-wrap">
           <Submit />
-          <span className="text-[11.5px] text-charcoal-faint max-w-sm leading-snug">
+          <span className="text-caption text-charcoal-faint max-w-sm leading-snug">
             One a day, and it disappears on its own after two days. A feed of last
             week&rsquo;s specials is worse than an empty one.
           </span>
