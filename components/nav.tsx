@@ -23,19 +23,19 @@ export default async function Nav({ subtitle }: { subtitle?: string }) {
         <BackLink />
         <div className="flex-1" />
 
-        {/* Residents get the FAQ; providers and admins get the rate card.
-            Pricing is a commercial conversation with providers, and putting it
-            in a browsing resident's face invites them to wonder what their
-            baker is paying — a question with no good answer for anyone. */}
+        {/* Residents get the FAQ; anyone signed in gets the provider guide.
+            The rate card used to live here and now sits at /admin/rates: while
+            the pilot is free, a fee schedule is the last thing a provider
+            deciding whether to sign up should be reading. */}
         {profile ? (
           <Link
             href="/rates"
-            title="What it costs to list your work"
-            aria-label="What it costs to list your work"
+            title="What you get from listing your work"
+            aria-label="What you get from listing your work"
             className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-sandstone bg-surface px-2 sm:pl-2.5 sm:pr-3 py-1.5 text-caption font-bold text-charcoal-soft hover:border-terracotta hover:text-terracotta-deep transition"
           >
             <Info size={16} />
-            <span className="hidden sm:inline">What it costs</span>
+            <span className="hidden sm:inline">What you get</span>
           </Link>
         ) : (
           <Link

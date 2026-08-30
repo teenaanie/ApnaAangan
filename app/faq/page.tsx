@@ -61,7 +61,7 @@ export default function Faq() {
           <div className="mt-4">
             <Note tone="mustard">
               Aangan is a resident-run pilot, not a company. If something here is
-              wrong or missing, tell an administrator and it gets fixed — see also
+              wrong or missing, tell us and it gets fixed — see also
               the{" "}
               <Link href="/terms" className="underline">
                 provider agreement

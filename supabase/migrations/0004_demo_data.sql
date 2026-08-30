@@ -1,3 +1,7 @@
+-- Reviews are deliberately NOT seeded. Nothing in the app lets a resident
+-- write one, so demo ratings were stars nobody could have given — a five-star
+-- average on a provider who has never had a customer is the most misleading
+-- thing a directory can show. Removed 30 August 2026.
 -- ============================================================================
 -- Demo data — invented providers so the directory doesn't look abandoned when
 -- you show it to someone. OPTIONAL. Run it, show the app, then delete it.
@@ -64,10 +68,6 @@ begin
              designs, same-day for whatever is on the regular menu.',
             450, 'onwards', 'Order by 8 pm for next-day pickup', '🎂', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Kavya S', 5, 'Ordered a birthday cake for my daughter. Better than the bakery downstairs and half the price.'),
-    (l, 'Arun M', 5, 'The banana bread is dangerous. Ordering weekly now.'),
-    (l, 'Divya P', 4, 'Lovely taste. Delivery ran a little late but she messaged ahead.');
   insert into provider_updates (provider_id, kind, headline, detail, valid_until, qty_left, status)
     values (p, 'offer', 'Blueberry cheesecake slices — fresh this morning',
             '₹180 a slice. Collect any time before 7 pm.', 'Today only', 12, 'approved');
@@ -86,9 +86,6 @@ begin
              trial week available before you commit.',
             3200, '/ month', 'Lunch 12–1 pm · Dinner 7:30–8:30 pm', '🍱', 'approved', 10000)
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Ramesh K', 5, 'Six months on the monthly plan. Consistent, hot, and she remembers I do not take chillies.'),
-    (l, 'Sneha T', 4, 'Great value. Would love a bit more variety at dinner.');
   insert into provider_updates (provider_id, kind, headline, detail, valid_until, status)
     values (p, 'announcement', 'Today''s lunch: bisi bele bath, curd rice, papad',
             'Same menu for dinner. Add-on curd rice ₹40.', 'Orders close 11 am', 'approved');
@@ -104,9 +101,6 @@ begin
              Fresh batches every fortnight.',
             280, '/ jar', 'New batch every second Friday', '🫙', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Harish V', 5, 'Tastes like my grandmother''s. I have stopped ordering from Hyderabad.'),
-    (l, 'Meghana R', 5, 'The gongura sells out in a day. Get on her list.');
 
   --------------------------------------------------------------- learn ------
   insert into providers (display_name, about, locality_id, status, is_demo,
@@ -122,9 +116,6 @@ begin
              and a proper progress report each term.',
             2500, '/ month', 'Weekday evenings, 5–8 pm', '📐', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Anita G', 5, 'My son went from 61% to 84% in two terms. She is patient in a way I am not.'),
-    (l, 'Vikram R', 5, 'Genuinely good teacher, and she tells you honestly when a child is coasting.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Grace D''Souza', 'Interview preparation and presentation coaching for
@@ -137,8 +128,6 @@ begin
              which is uncomfortable and the fastest way to improve.',
             3000, '/ month', 'Weekday evenings and Sunday mornings', '🗣️', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Prakash S', 5, 'Cleared an interview I would have frozen in six months ago.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Alex F', 'Teaching guitar and keyboard to beginners of any age. Trinity
@@ -151,8 +140,6 @@ begin
              lessons if you would rather not buy one yet.',
             2200, '/ month', 'Weekday evenings', '🎸', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Nithya S', 5, 'Started at 41. He never once made me feel late to it.');
 
   ---------------------------------------------------------------- kids ------
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
@@ -167,8 +154,6 @@ begin
              children take far more seriously than the parents do.',
             1600, '/ month', 'Saturday & Sunday mornings', '💃', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Lalitha N', 5, 'Rigorous in the old way, and the children adore her. Rare combination.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Suresh G', 'FIDE-rated coach. Beginners through to tournament preparation.',
@@ -181,8 +166,6 @@ begin
              I will tell you honestly whether your child wants to compete.',
             2000, '/ month', 'Tuesday & Thursday, 6–7 pm', '♟️', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Raghav I', 5, 'My son beat me for the first time last Sunday. Mixed feelings. Excellent coach.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Ananya H', 'Saturday morning art for ages 5 to 11. Materials included,
@@ -195,8 +178,6 @@ begin
              which your fridge should be warned about.',
             1200, '/ month', 'Saturdays, 10–11:30 am', '🎨', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Deepa S', 5, 'The one activity my daughter asks about on Friday night.');
 
   -------------------------------------------------------------- beauty ------
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
@@ -210,9 +191,6 @@ begin
              including the towels.',
             150, 'onwards', 'Daily, 10 am–7 pm', '💅', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Pooja D', 5, 'Two years now. Never once late, never once a bad job.'),
-    (l, 'Anjali M', 4, 'Very good. Book ahead on weekends.');
   insert into provider_updates (provider_id, kind, headline, detail, valid_until, status)
     values (p, 'slots', 'Three openings left this evening',
             'Threading, waxing or a quick pedicure.', 'Today, 4–7 pm', 'approved');
@@ -228,8 +206,6 @@ begin
              whole thing in front of the group.',
             1800, '/ month', 'Mon, Wed, Fri · 6:15–7:15 am', '🧘', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Shalini A', 5, 'Never thought I would be a 6 am person. The terrace at sunrise does something to you.');
 
   ---------------------------------------------------------------- home ------
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
@@ -243,9 +219,6 @@ begin
              hemming. Busy in wedding season, so plan ahead.',
             250, 'onwards', 'Mon–Sat, 10 am–6 pm', '🧵', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Preethi J', 5, 'Fixed four blouses a shop on Aundh Road had ruined. Fast and reasonable.'),
-    (l, 'Nandini B', 4, 'Good work, and she tells you honestly if a repair is not worth it.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Vinay P', 'Balcony gardens designed for the light you actually have,
@@ -258,8 +231,6 @@ begin
              would rather not be responsible for keeping them alive.',
             2500, 'onwards', 'Weekends', '🪴', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Ashwin T', 5, 'My north-facing balcony was a graveyard. Everything he chose is still alive six months on.');
 
   -------------------------------------------------------------- repair ------
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
@@ -272,9 +243,6 @@ begin
             'Screen replacement, battery swaps, data recovery, slow-laptop cleanups.',
             500, 'onwards', 'Evenings and weekends', '💻', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Manoj P', 5, 'Recovered photos off a dead hard disk I had written off.'),
-    (l, 'Reena K', 4, 'Honest — told me my laptop was not worth repairing instead of taking the money.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Imran H', 'AC servicing and appliance repair, with annual maintenance
@@ -287,8 +255,6 @@ begin
              Two-day wait in peak summer, and I will tell you so upfront.',
             550, '/ service', 'Daily, 9 am–7 pm', '❄️', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Latha K', 5, 'Three ACs serviced in one morning, at the rate he quoted on the phone.');
 
   ---------------------------------------------------------------- pets ------
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
@@ -302,8 +268,6 @@ begin
              which sometimes means two visits.',
             800, 'onwards', 'Weekends, by appointment', '🐕', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Tara M', 5, 'My beagle usually screams at groomers. Slept through half of it.');
   insert into provider_updates (provider_id, kind, headline, detail, valid_until, status)
     values (p, 'slots', 'Weekend grooming slots opened up',
             'Saturday afternoon and Sunday morning still free.', 'This weekend', 'approved');
@@ -319,8 +283,6 @@ begin
             'HD and airbrush. Trial included for bridal bookings. I travel to you.',
             6000, 'onwards', 'By appointment — book early for wedding season', '💄', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Ayesha R', 5, 'Did my sister''s sangeet and reception. Held up through eleven hours and a lot of crying.');
 
   insert into providers (display_name, about, locality_id, status, is_demo, leads_total, leads_accepted)
     values ('Swati L', 'Party and event decor, set up and cleared away the same night.',
@@ -333,8 +295,6 @@ begin
              clubhouse bookings. Setup and cleanup included.',
             3500, 'onwards', 'Book 5 days ahead', '🎈', 'approved')
     returning id into l;
-  insert into reviews (listing_id, author_name, rating, body) values
-    (l, 'Rakesh M', 5, 'Turned our flat into a jungle for a four-year-old, and cleaned up by 11 pm as promised.');
 
   ---------------------------------------------- one awaiting approval -------
   -- So the admin queue isn't empty the first time you open it.

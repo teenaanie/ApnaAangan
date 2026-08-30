@@ -71,7 +71,7 @@ export default function AdditionalInfo({
         {pending && (
           <div className="mb-3">
             <Note tone="mustard">
-              <b>Waiting to be checked.</b> A moderator reads this before it
+              <b>Waiting to be checked.</b> This is read before it
               appears.{" "}
               {live
                 ? "What's on your page now stays up until then."

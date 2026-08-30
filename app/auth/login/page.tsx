@@ -13,7 +13,7 @@ export default function LoginPage() {
         <div className="max-w-sm mx-auto py-14">
           <h1 className="mb-1.5">Provider sign in</h1>
           <p className="text-charcoal-soft text-body mb-6">
-            For people who list their work, and for moderators.
+            For people who list their work.
           </p>
           <Suspense fallback={null}>
             <LoginForm />

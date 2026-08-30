@@ -142,12 +142,11 @@ export default function OnboardingForm({
 
       <div className="mt-4">
         <Note>
-          Your first <b>10 accepted requests are free</b>. After that you pay only
-          for requests you accept — ₹20 for one-off work, ₹50 for home services and
-          repairs, ₹100 for tuition, classes and events. Every request shows its fee
-          before you decide, and declining always costs nothing.{" "}
+          <b>Listing is free.</b> There is no joining fee, no monthly fee, and
+          Aangan takes no cut of what you earn — what a customer pays you is
+          between you and them.{" "}
           <Link href="/rates" className="underline font-bold">
-            The full rate card
+            What you get
           </Link>
           .
         </Note>

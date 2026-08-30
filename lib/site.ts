@@ -72,3 +72,15 @@ export async function absoluteLink(path: string): Promise<string> {
   const p = path.startsWith("/") ? path : `/${path}`;
   return base ? `${base}${p}` : p;
 }
+
+/**
+ * Public URL prefix for the listing-photos bucket.
+ *
+ * The bucket is public, so a path becomes a URL by prefixing it — no signed
+ * URL, no round trip per image. Derived from the Supabase project URL so it
+ * follows staging and production automatically.
+ */
+export function photoBase(): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "") ?? "";
+  return base ? `${base}/storage/v1/object/public/listing-photos` : "";
+}

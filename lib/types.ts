@@ -75,6 +75,7 @@ export type Lead = {
   resident_name: string;
   resident_phone: string;
   resident_flat: string | null;
+  resident_address: string | null;
   message: string;
   requested_day: string | null;
   requested_time: string | null;

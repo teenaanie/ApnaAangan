@@ -25,7 +25,7 @@ export default async function Onboarding() {
         <div className="max-w-lg py-10">
           <h1 className="mb-1.5">List your work</h1>
           <p className="text-charcoal-soft text-body mb-7">
-            Two minutes. A moderator checks it before it goes live, and you get a
+            Two minutes. It is checked before it goes live, and you get a
             provider ID plus a link you can share with the customers you already have.
           </p>
           <p className="text-body text-charcoal-soft mb-7 -mt-4">

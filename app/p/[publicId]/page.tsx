@@ -2,11 +2,15 @@ import { notFound } from "next/navigation";
 import Nav from "@/components/nav";
 import BookingForm from "./booking-form";
 import { Badge, Card, Note, SectionHeader, Shell, Stat } from "@/components/ui";
-import { MapPin, CategoryIcon } from "@/components/icons";
+import { Check, Clock, MapPin, CategoryIcon } from "@/components/icons";
+import { VERIFICATION } from "@/lib/verification";
+import { photoBase } from "@/lib/site";
 import {
   getListingsForProvider,
   getProviderByPublicId,
   getReviewsForProvider,
+  getTodayForProvider,
+  getApprovedPhotos,
   isConfigured,
 } from "@/lib/data";
 
@@ -37,10 +41,14 @@ export default async function ProviderPage({
   const provider = await getProviderByPublicId(publicId);
   if (!provider) notFound();
 
-  const [listings, reviews] = await Promise.all([
+  const [listings, reviews, today] = await Promise.all([
     getListingsForProvider(provider.id),
     getReviewsForProvider(provider.id),
+    getTodayForProvider(provider.id),
   ]);
+
+  const photos = await getApprovedPhotos(listings.map((l) => l.id));
+  const base = photoBase();
 
   const focus = listings.find((l) => l.id === sp.listing) ?? listings[0];
   const isActive = provider.status === "active";
@@ -92,7 +100,14 @@ export default async function ProviderPage({
                       Map
                     </a>
                   )}
-                  {provider.verified_id && <Badge tone="sage">ID verified</Badge>}
+                  {provider.verified_id && (
+                    <span title={VERIFICATION.short}>
+                      <Badge tone="sage">
+                        <Check size={12} />
+                        {VERIFICATION.label}
+                      </Badge>
+                    </span>
+                  )}
                   {!isActive && <Badge tone="mustard">Not yet approved</Badge>}
                 </p>
               </div>
@@ -107,11 +122,34 @@ export default async function ProviderPage({
             <div className="flex gap-8 py-4 border-y border-sandstone-soft mb-6">
               <Stat value={listings.length} label="listings" />
               <Stat value={provider.leads_accepted} label="bookings accepted" />
-              <Stat
-                value={focus && focus.review_count > 0 ? Number(focus.avg_rating).toFixed(1) : "—"}
-                label="average rating"
-              />
+              {/* No average rating: nothing in the app lets a resident write a
+                  review, so any figure here would be either "—" or, worse,
+                  seeded demo stars nobody actually gave. */}
             </div>
+
+            {/* What is on today, in the place a returning customer looks
+                first. This is the post that already drives "Happening today"
+                on the directory; it was never shown on the page a provider
+                actually hands out on a QR code. */}
+            {today && (
+              <div className="mb-6">
+                <Card className="p-4 bg-mustard-tint border-mustard/25">
+                  <p className="text-caption font-bold text-mustard m-0 mb-1 flex items-center gap-1.5">
+                    <Clock size={13} />
+                    Today
+                    {today.qty_left != null && today.qty_left > 0 && (
+                      <span className="font-normal">· {today.qty_left} left</span>
+                    )}
+                  </p>
+                  <p className="text-subheading text-charcoal m-0">{today.headline}</p>
+                  {today.detail && (
+                    <p className="text-body text-charcoal-soft leading-relaxed m-0 mt-1">
+                      {today.detail}
+                    </p>
+                  )}
+                </Card>
+              </div>
+            )}
 
             <SectionHeader>What they offer</SectionHeader>
             {listings.length === 0 ? (
@@ -122,6 +160,28 @@ export default async function ProviderPage({
               <div className="grid sm:grid-cols-2 gap-3">
                 {listings.map((l) => (
                   <Card key={l.id} className="p-4">
+                    {/* The photograph does more selling than any description,
+                        so it goes above the words rather than beside them. */}
+                    {(photos[l.id]?.length ?? 0) > 0 && (
+                      <div
+                        className={`grid gap-1.5 mb-3 ${
+                          photos[l.id].length === 1 ? "grid-cols-1" : "grid-cols-2"
+                        }`}
+                      >
+                        {photos[l.id].slice(0, 4).map((path) => (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            key={path}
+                            src={`${base}/${path}`}
+                            alt={`${l.title} — by ${provider.display_name}`}
+                            loading="lazy"
+                            className={`w-full object-cover rounded-xl border border-sandstone-soft ${
+                              photos[l.id].length === 1 ? "aspect-[4/3]" : "aspect-square"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-start gap-2.5 mb-2">
                       <span className="text-icon leading-none">{l.icon || "✦"}</span>
                       <h3 className="text-body font-bold m-0 leading-snug text-charcoal">

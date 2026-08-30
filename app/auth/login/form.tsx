@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Field, Note, inputClass } from "@/components/ui";
@@ -211,6 +212,19 @@ export default function LoginForm() {
             : "Sign in"}
         </Button>
 
+        {/* Only offered on sign-in. Someone creating an account has no password
+            to forget, and the link there would just be a second thing to read. */}
+        {mode === "signin" && (
+          <p className="text-caption text-charcoal-soft mt-4 text-center">
+            <Link
+              href="/auth/forgot"
+              className="font-bold text-terracotta-deep underline underline-offset-2"
+            >
+              Forgotten your password?
+            </Link>
+          </p>
+        )}
+
         {error && (
           <div className="mt-4">
             <p className="text-body font-bold text-terracotta-deep mb-2">{error}</p>
@@ -223,8 +237,8 @@ export default function LoginForm() {
 
       <div className="mt-5">
         <Note>
-          <b>Only providers and admins need an account.</b> Residents browse and send
-          booking requests without signing in at all.
+          <b>Only people who list their work need an account.</b> Residents
+          browse and send booking requests without signing in at all.
         </Note>
       </div>
     </>

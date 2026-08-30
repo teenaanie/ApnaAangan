@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { leadEmail, sendMail } from "@/lib/email";
 import { rupees } from "@/lib/brand";
 import { resolvedSiteUrl } from "@/lib/site";
+import { getBillingEnabled } from "@/lib/data";
 
 export type BookingState = { error?: string };
 
@@ -27,6 +28,7 @@ export async function createBooking(
   const phone = String(formData.get("phone") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const flat = String(formData.get("flat") || "").trim();
+  const address = String(formData.get("address") || "").trim().slice(0, 400);
   const listingId = String(formData.get("listing_id") || "") || null;
   const when = String(formData.get("when") || "").trim();
 
@@ -43,6 +45,7 @@ export async function createBooking(
     p_name: name,
     p_phone: phone,
     p_flat: flat || null,
+    p_address: address || null,
     p_message: message,
     p_when: when || null,
   });
@@ -64,6 +67,7 @@ export async function createBooking(
 
   if (to) {
     const site = await resolvedSiteUrl();
+    const billing = await getBillingEnabled();
     const fee = Number(res.quoted_fee_paise ?? 2000);
     await sendMail({
       to,
@@ -77,6 +81,7 @@ export async function createBooking(
         // Straight to the section holding the Accept button, not the top of a
         // dashboard they then have to scroll.
         url: `${site}/provider#requests`,
+        billing,
         fee: rupees(fee),
         free: Boolean(res.free),
       }),

@@ -3,11 +3,13 @@ import Link from "next/link";
 import Nav from "@/components/nav";
 import AddListing from "./add-listing";
 import EditListing from "./edit-listing";
+import Photos, { type ListingPhoto } from "./photos";
+import { photoBase } from "@/lib/site";
 import AdditionalInfo from "./additional-info";
 import { setListingPaused } from "../actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { getCategories, getMyProvider, isConfigured } from "@/lib/data";
+import { getPhotosForProvider, getCategories, getMyProvider, isConfigured } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your listings" };
@@ -42,13 +44,13 @@ function visibility(l: Row, providerStatus: string) {
   if (providerStatus === "closed")
     return { live: false, label: "Hidden", why: "Your listing is closed" };
   if (providerStatus === "suspended")
-    return { live: false, label: "Hidden", why: "Suspended by a moderator" };
+    return { live: false, label: "Hidden", why: "Suspended" };
   if (providerStatus === "pending")
     return { live: false, label: "Not yet live", why: "Awaiting approval" };
   if (l.paused_at) return { live: false, label: "Paused", why: "You paused this one" };
   if (!l.is_active) return { live: false, label: "Hidden", why: "Archived" };
   if (l.status === "rejected")
-    return { live: false, label: "Rejected", why: "A moderator turned this down" };
+    return { live: false, label: "Rejected", why: "This was not approved" };
   if (l.status !== "approved")
     return { live: false, label: "Not yet live", why: "Awaiting approval" };
   return { live: true, label: "Live", why: null as string | null };
@@ -59,8 +61,9 @@ export default async function ListingsPage() {
   const provider = await getMyProvider();
   if (!provider) redirect("/provider/onboarding");
 
+  const base = photoBase();
   const supabase = await createClient();
-  const [{ data: rows }, categories] = await Promise.all([
+  const [{ data: rows }, categories, allPhotos] = await Promise.all([
     supabase
       .from("listings")
       .select(
@@ -69,7 +72,18 @@ export default async function ListingsPage() {
       .eq("provider_id", provider.id)
       .order("created_at", { ascending: false }),
     getCategories(),
+    getPhotosForProvider(provider.id),
   ]);
+
+  // Grouped once rather than filtered per card inside the render loop.
+  const photosByListing: Record<string, ListingPhoto[]> = {};
+  for (const ph of allPhotos) {
+    (photosByListing[ph.listing_id] ||= []).push({
+      id: ph.id,
+      storage_path: ph.storage_path,
+      status: ph.status,
+    });
+  }
 
   const all = (rows ?? []) as unknown as Row[];
   const listings = all.filter((l) => l.is_active);
@@ -117,13 +131,13 @@ export default async function ListingsPage() {
                   </>
                 ) : provider.status === "closed" ? (
                   <>
-                    <b>Your listing is closed.</b> Nothing here is visible, and only
-                    an administrator can reopen it.
+                    <b>Your listing is closed.</b> Nothing here is visible, and
+                    reopening it has to be done for you.
                   </>
                 ) : (
                   <>
-                    <b>Your account is suspended.</b> Nothing here is visible until a
-                    moderator lifts it.
+                    <b>Your account is suspended.</b> Nothing here is visible until
+                    that is lifted.
                   </>
                 )}
               </Note>
@@ -191,6 +205,18 @@ export default async function ListingsPage() {
                           </p>
                         )}
                       </div>
+                    </div>
+
+                    <div className="mt-3.5 pt-3.5 border-t border-sandstone-soft">
+                      <p className="text-caption font-bold text-charcoal-soft mb-2">
+                        Photos
+                      </p>
+                      <Photos
+                        listingId={l.id}
+                        providerId={provider.id}
+                        photos={photosByListing[l.id] ?? []}
+                        publicBase={base}
+                      />
                     </div>
 
                     <EditListing

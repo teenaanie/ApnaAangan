@@ -12,6 +12,7 @@ import {
 import { listingLabel } from "@/lib/listing-label";
 import type { ListingCard } from "@/lib/types";
 import { Search, CategoryIcon } from "@/components/icons";
+import { VERIFICATION } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
 
@@ -264,7 +265,11 @@ function ListingTile({ l }: { l: ListingCard }) {
               {l.category_label}
             </Badge>
           )}
-          {l.verified_id && <Badge tone="sage">ID verified</Badge>}
+          {l.verified_id && (
+            <span title={VERIFICATION.short}>
+              <Badge tone="sage">{VERIFICATION.label}</Badge>
+            </span>
+          )}
         </div>
       </Card>
     </Link>

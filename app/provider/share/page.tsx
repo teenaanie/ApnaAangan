@@ -7,6 +7,7 @@ import { getListingsForProvider, getMyProvider, isConfigured } from "@/lib/data"
 import { Logo } from "@/components/logo";
 import { Download, CategoryIcon } from "@/components/icons";
 import { absoluteLink } from "@/lib/site";
+import { VERIFICATION } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Share your link" };
@@ -121,7 +122,7 @@ export default async function SharePage() {
                       </p>
                       {provider.verified_id && (
                         <div className="mt-1.5">
-                          <Badge tone="sage">ID verified</Badge>
+                          <Badge tone="sage">{VERIFICATION.label}</Badge>
                         </div>
                       )}
                     </div>

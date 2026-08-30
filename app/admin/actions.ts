@@ -329,3 +329,23 @@ export async function decideAdditionalInfo(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/");
 }
+
+/**
+ * Approve or reject one listing photo.
+ *
+ * A photo is the easiest place to hide a phone number, a watermark, or someone
+ * else's work, so it passes the same eye as listing text. Rejecting leaves the
+ * row in place with status 'rejected' rather than deleting it, so the provider
+ * can see it was turned down instead of wondering where it went.
+ */
+export async function decidePhoto(formData: FormData) {
+  const id = String(formData.get("id") || "");
+  const approve = String(formData.get("approve") || "") === "yes";
+  if (!id) return;
+
+  const supabase = await assertAdmin();
+  await supabase.rpc("decide_photo", { p_id: id, p_approve: approve });
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+}

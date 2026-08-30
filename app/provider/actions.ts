@@ -184,7 +184,7 @@ export async function postUpdate(
   if (error) return { error: error.message };
 
   revalidatePath("/provider");
-  return { ok: "Posted. It appears once it clears moderation." };
+  return { ok: "Posted. It appears once it has been checked." };
 }
 
 /* ------------------------------------------------------- availability & money */
@@ -225,7 +225,7 @@ export async function setAvailability(
       status === "paused"
         ? "Your listing is paused. Neighbours can't see it or send requests until you resume."
         : status === "closed"
-        ? "Your listing is closed. Contact an administrator if you want it back."
+        ? "Your listing is closed. Get in touch if you want it back."
         : "You're live again.",
   };
 }
@@ -355,7 +355,7 @@ export async function setAdditionalInfo(
 
   return {
     ok: res.queued
-      ? "Saved. A moderator reads it before it appears — usually within a day. What's on your page now stays up until then."
+      ? "Saved. It is read before it appears — usually within a day. What's on your page now stays up until then."
       : "That matches what's already on your page, so there's nothing to review.",
   };
 }

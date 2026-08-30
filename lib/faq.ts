@@ -68,7 +68,7 @@ export const CUSTOMER_FAQ: FaqSection[] = [
       },
       {
         q: "I got a message saying I have sent too many requests.",
-        a: "There is a limit of five requests an hour from one phone number, which exists to stop the directory being spammed. If you have genuinely hit it while organising a party, wait an hour or tell an administrator and it will be sorted out.",
+        a: "There is a limit of five requests an hour from one phone number, which exists to stop the directory being spammed. If you have genuinely hit it while organising a party, wait an hour or tell us and it will be sorted out.",
       },
     ],
   },
@@ -77,15 +77,15 @@ export const CUSTOMER_FAQ: FaqSection[] = [
     items: [
       {
         q: "Who can see my phone number?",
-        a: "Only the provider you wrote to, and only after they accept your request — plus the administrators, who can see enquiries in order to resolve disputes. It is never shown on the site, never visible to other residents, and never given to a provider you did not write to. This is enforced by the database itself, not just hidden in the interface.",
+        a: "Only the provider you wrote to, and only after they accept your request — plus the two people who run Aangan, who can see enquiries in order to resolve disputes. It is never shown on the site, never visible to other residents, and never given to a provider you did not write to. This is enforced by the database itself, not just hidden in the interface.",
       },
       {
         q: "Are providers verified?",
-        a: "Partly, and it is worth being clear about the limits. Every provider and every listing is checked by an administrator before it appears, so nothing goes public unseen. Some providers carry an 'ID verified' badge, which means an administrator has seen a government ID. What Aangan does not do is inspect anyone's kitchen, check their licences, or vouch for the quality of their work. Treat it as a trusted neighbourhood directory, not a certification.",
+        a: "Partly, and it is worth being clear about the limits. Every provider and every listing is checked before it appears, so nothing goes public unseen. Some providers carry a 'Neighbour confirmed' badge: their phone number was called and answered, and they confirmed the flat and society they live in. That is the whole of it — no government ID has been seen, no licence or kitchen has been inspected, and the quality of anyone's work is not vouched for. Treat it as a trusted neighbourhood directory, not a certification.",
       },
       {
         q: "What if something goes wrong — bad quality, a no-show?",
-        a: "Speak to the provider first. They fulfilled the order and they are almost always the fastest route to fixing it. If it does not get resolved, tell an administrator, quoting your reference code. Repeated complaints that a provider does not resolve affect whether they stay listed.",
+        a: "Speak to the provider first. They fulfilled the order and they are almost always the fastest route to fixing it. If it does not get resolved, tell us, quoting your reference code. Repeated complaints that a provider does not resolve affect whether they stay listed.",
       },
       {
         q: "Can I leave a review?",
@@ -106,11 +106,11 @@ export const CUSTOMER_FAQ: FaqSection[] = [
       },
       {
         q: "Can I suggest someone who isn't listed?",
-        a: "Please do. Send them the 'List your work' link, or tell an administrator and they will be approached directly. The directory is only as good as who is in it, and the best additions come from residents who already use someone and rate them.",
+        a: "Please do. Send them the 'List your work' link, or tell us and they will be approached directly. The directory is only as good as who is in it, and the best additions come from residents who already use someone and rate them.",
       },
       {
         q: "Who do I contact about anything else?",
-        a: "The administrators — Teena, and Tincy in Mont Vert Pristine. This is a resident-run pilot rather than a company, so you are talking to a neighbour, not a support line.",
+        a: "Teena, and Tincy in Mont Vert Pristine. Aangan is a resident-run pilot rather than a company, so you are talking to a neighbour, not a support line.",
       },
     ],
   },

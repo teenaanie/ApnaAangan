@@ -6,11 +6,11 @@ import UpdateComposer from "./update-composer";
 import Availability from "./availability";
 import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { getMyProvider, isConfigured } from "@/lib/data";
+import { getBillingEnabled, getMyProvider, isConfigured } from "@/lib/data";
 import { FREE_LEADS, rupees } from "@/lib/brand";
 import { waGreeting, waLink } from "@/lib/whatsapp";
 import type { Lead } from "@/lib/types";
-import { WhatsApp } from "@/components/icons";
+import { MapPin, WhatsApp } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your dashboard" };
@@ -68,7 +68,10 @@ export default async function ProviderDashboard({
   );
   const declined = leads.filter((l) => l.status === "declined").length;
 
+  // Nothing about money is shown, or true, while the pilot is free.
+  const billing = await getBillingEnabled();
   const overLimit =
+    billing &&
     provider.free_leads_remaining <= 0 &&
     provider.balance_paise >= (provider.credit_limit_paise ?? 50000);
 
@@ -85,7 +88,7 @@ export default async function ProviderDashboard({
             <div className="mb-6">
               <Note>
                 <b>You&rsquo;re listed.</b> Your provider ID is{" "}
-                <b>{provider.public_id}</b>. Once a moderator approves it, share your
+                <b>{provider.public_id}</b>. Once it is approved, share your
                 link with the customers you already have — that&rsquo;s how the first
                 residents find Aangan.
               </Note>
@@ -118,7 +121,7 @@ export default async function ProviderDashboard({
                 flex row bunch up on the left with half the card empty beside
                 them. Columns keep them evenly spaced at any width, and fold to
                 three then two on smaller screens. */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-5 gap-x-6">
+            <div className={`grid grid-cols-2 gap-y-5 gap-x-6 ${billing ? "sm:grid-cols-3 lg:grid-cols-6" : "sm:grid-cols-4"}`}>
               <Stat value={provider.leads_total} label="requests received" />
               <Stat value={provider.leads_accepted} label="accepted" />
               <Stat value={declined} label="declined" />
@@ -126,14 +129,25 @@ export default async function ProviderDashboard({
                 value={responseRate === null ? "—" : `${responseRate}%`}
                 label="you responded to"
               />
-              <Stat
-                value={provider.free_leads_remaining}
-                label={`free of ${FREE_LEADS} left`}
-              />
-              <Stat value={rupees(provider.balance_paise)} label="owed so far" />
+              {billing && (
+                <>
+                  <Stat
+                    value={provider.free_leads_remaining}
+                    label={`free of ${FREE_LEADS} left`}
+                  />
+                  <Stat value={rupees(provider.balance_paise)} label="owed so far" />
+                </>
+              )}
             </div>
             <div className="mt-4">
-              {provider.free_leads_remaining > 0 ? (
+              {!billing ? (
+                <Note>
+                  <b>Listing on Aangan is free.</b> There is no charge for being
+                  listed and no charge for taking a request — not now, and not
+                  without plenty of warning first. Aangan takes no cut of what
+                  you earn, and never handles your customers&rsquo; money.
+                </Note>
+              ) : provider.free_leads_remaining > 0 ? (
                 <Note>
                   Your first {FREE_LEADS} accepted requests are free — you have{" "}
                   <b>{provider.free_leads_remaining}</b> left. After that the fee
@@ -166,8 +180,8 @@ export default async function ProviderDashboard({
               <Note tone="mustard">
                 <b>You&rsquo;ve reached your limit of {rupees(provider.credit_limit_paise ?? 50000)} outstanding.</b>{" "}
                 Requests still reach you, but accepting is paused until{" "}
-                {rupees(provider.balance_paise)} is settled. Pay an administrator by
-                UPI and they will record it — your balance updates as soon as they do.
+                {rupees(provider.balance_paise)} is settled. Pay by UPI and it
+                will be recorded — your balance updates as soon as it is.
               </Note>
             </div>
           )}
@@ -183,7 +197,7 @@ export default async function ProviderDashboard({
                 exceeding the hourly limit. You were not charged and nothing reached
                 your inbox.{" "}
                 {blocked.some((b) => b.status === "open")
-                  ? "A moderator is reviewing it."
+                  ? "It is being reviewed."
                   : "It has been reviewed."}{" "}
                 If you were expecting a lot of enquiries from one person — a family
                 placing several orders, say — tell us and we&rsquo;ll clear it.
@@ -216,7 +230,7 @@ export default async function ProviderDashboard({
             ) : (
               <div className="grid gap-3">
                 {inbox.map((l) => (
-                  <LeadCard key={l.id} lead={l} actionable freeLeft={provider.free_leads_remaining} />
+                  <LeadCard key={l.id} lead={l} actionable billing={billing} freeLeft={provider.free_leads_remaining} />
                 ))}
               </div>
             )}
@@ -269,11 +283,14 @@ const WhatsAppGlyph = () => <WhatsApp size={15} />;
 function LeadCard({
   lead,
   actionable,
+  billing = false,
   freeLeft = 0,
   providerName,
 }: {
   lead: Lead;
   actionable?: boolean;
+  /** While the pilot is free there is no fee to quote, so none is shown. */
+  billing?: boolean;
   freeLeft?: number;
   providerName?: string;
 }) {
@@ -288,7 +305,7 @@ function LeadCard({
         <div className="min-w-0 flex-1">
           <p className="text-caption text-charcoal-faint font-mono tracking-wide mb-1">
             {lead.ref}
-            {lead.status === "new" && (
+            {billing && lead.status === "new" && (
               <span className="ml-2 font-sans not-italic">
                 {isFree ? "· free (allowance)" : `· ${rupees(fee)} if you accept`}
               </span>
@@ -300,6 +317,12 @@ function LeadCard({
             {lead.resident_flat ? ` · ${lead.resident_flat}` : ""}
             {lead.requested_time ? ` · wants ${lead.requested_time}` : ""}
           </p>
+          {lead.status === "accepted" && lead.resident_address && (
+            <p className="text-caption text-charcoal-soft mt-1.5 flex items-start gap-1.5">
+              <MapPin size={13} className="mt-0.5 text-charcoal-faint" />
+              <span className="whitespace-pre-line">{lead.resident_address}</span>
+            </p>
+          )}
           {lead.status === "accepted" && (
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <a
@@ -325,7 +348,7 @@ function LeadCard({
           <Badge tone={tone as "sage" | "neutral" | "mustard"}>
             {lead.status === "new" ? "Awaiting you" : lead.status}
           </Badge>
-          {lead.charged && (
+          {billing && lead.charged && (
             <span className="text-caption text-charcoal-faint">
               {rupees(lead.charge_paise)} charged
             </span>
@@ -339,7 +362,7 @@ function LeadCard({
             <input type="hidden" name="lead_id" value={lead.id} />
             <input type="hidden" name="decision" value="accepted" />
             <Button type="submit" variant="sage" full>
-              {isFree ? "Accept — free" : `Accept — ${rupees(fee)}`}
+              {!billing ? "Accept" : isFree ? "Accept — free" : `Accept — ${rupees(fee)}`}
             </Button>
           </form>
           <form action={respondToLead}>

@@ -61,7 +61,9 @@ export async function sendMail(opts: { to: string; subject: string; html: string
  */
 export function leadEmail(a: {
   providerName: string; ref: string; message: string;
-  residentName: string; when: string | null; url: string; fee: string; free: boolean;
+  residentName: string; when: string | null; url: string;
+  /** Omitted entirely while the pilot is free — see migration 0020. */
+  fee?: string; free?: boolean; billing?: boolean;
 }) {
   return `
   <div style="font-family:system-ui,sans-serif;max-width:520px;color:#333433">
@@ -73,11 +75,13 @@ export function leadEmail(a: {
       ${a.message}
     </blockquote>
     ${a.when ? `<p style="margin:0 0 16px"><b>Requested for:</b> ${a.when}</p>` : ""}
-    <p style="margin:0 0 20px;font-size:14px">
-      ${a.free
-        ? "Accepting this one is <b>free</b> — it comes out of your free allowance."
-        : `Accepting costs <b>${a.fee}</b>. Declining is free.`}
-    </p>
+    ${a.billing
+      ? `<p style="margin:0 0 20px;font-size:14px">${
+          a.free
+            ? "Accepting this one is <b>free</b> — it comes out of your free allowance."
+            : `Accepting costs <b>${a.fee}</b>. Declining is free.`
+        }</p>`
+      : ""}
     <p style="margin:0 0 22px">
       <a href="${a.url}" style="background:#c86840;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;display:inline-block">
         Accept or decline
@@ -86,7 +90,7 @@ export function leadEmail(a: {
     <p style="color:#8b8c88;font-size:12px;line-height:1.6">
       You will see ${a.residentName}&rsquo;s phone number as soon as you accept,
       and can message them on WhatsApp with one tap. Nothing is shared before
-      that. You are only charged for requests you accept.
+      that.
     </p>
   </div>`;
 }

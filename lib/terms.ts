@@ -25,7 +25,7 @@ export const TERMS_EFFECTIVE = "19 August 2026";
 export type Clause = { n: string; title: string; body: string[] };
 
 export const TERMS_INTRO =
-  "This sets out the terms on which your business is listed on Aangan, a neighbourhood directory and enquiry service operated by the platform administrators. It is written to be read in five minutes, not to be impressive. If a clause is unclear, ask before you accept it.";
+  "This sets out the terms on which your business is listed on Aangan, a neighbourhood directory and enquiry service run by two residents. It is written to be read in five minutes, not to be impressive. If a clause is unclear, ask before you accept it.";
 
 export const TERMS: Clause[] = [
   {
@@ -42,7 +42,7 @@ export const TERMS: Clause[] = [
     title: "Your listing",
     body: [
       "You will give accurate details of what you offer, your pricing, and your availability, and you will keep them current. A listing that is months out of date wastes a neighbour's time and reflects on everyone here.",
-      "New listings, and changes to existing ones, are reviewed by an administrator before they appear. This normally takes a day or less.",
+      "New listings, and changes to existing ones, are reviewed before they appear. This normally takes a day or less.",
       "Your phone number is never published on your listing. It is stored separately and is not readable by residents browsing the directory.",
     ],
   },
@@ -58,12 +58,10 @@ export const TERMS: Clause[] = [
     n: "4",
     title: "What you pay",
     body: [
-      "Listing on Aangan is free. There is no joining fee, no annual fee, and no monthly fee.",
-      "You pay a fee only when you ACCEPT an enquiry: ₹20, ₹50 or ₹100 depending on the category, shown to you on the enquiry itself before you decide. Declining an enquiry, or leaving it unanswered, costs nothing.",
-      "Your first 10 accepted enquiries are free.",
+      "Nothing. Aangan is free to list on and free to use for the whole of the pilot: no joining fee, no monthly fee, and no charge for taking an enquiry.",
       "Aangan takes no commission and no percentage of what you earn. What the customer pays you is between you and them, and Aangan never sees the amount.",
-      "The fee that applies to an enquiry is fixed at the moment that enquiry arrives. A later change to the rates does not apply retrospectively.",
-      "Rates may change with at least 30 days' notice to you. If a change does not suit you, you may end this agreement under clause 8.",
+      "Charging may begin later, and if it does you will be told at least 30 days beforehand and told exactly what it would cost you. Nothing is ever charged retrospectively — enquiries you accept while the pilot is free stay free, whatever happens afterwards.",
+      "If a future charge does not suit you, you may end this agreement under clause 8 and owe nothing.",
     ],
   },
   {
@@ -89,7 +87,7 @@ export const TERMS: Clause[] = [
     title: "Complaints, reviews, and conduct",
     body: [
       "If a resident complains, it will be passed to you so that you can resolve it directly. Most things end there.",
-      "Repeated complaints that go unresolved may lead to your listing being paused or removed, at the administrators' discretion. You will be told first, and told why.",
+      "Repeated complaints that go unresolved may lead to your listing being paused or removed. You will be told first, and told why.",
       "Residents may leave public reviews and ratings. Genuine reviews are not edited or removed at a provider's request. Reviews that are abusive, or that are not from a real customer, are removed.",
       "Listings that are misleading about what is offered, or that publish another person's contact details, are removed without notice.",
     ],
@@ -109,7 +107,7 @@ export const TERMS: Clause[] = [
     body: [
       "A resident's name and phone number are shown to you only after you accept their enquiry. They are given to you so you can fulfil that enquiry. Please do not add them to a broadcast list or pass them to anyone else.",
       "Your own phone number is shown to a resident only after you have accepted their enquiry.",
-      "The administrators can see enquiries and contact details, because someone has to be able to sort out a dispute or a blocked number.",
+      "The people who run Aangan can see enquiries and contact details, because someone has to be able to sort out a dispute or a blocked number.",
       "Enquiry records, ratings and platform statistics belong to Aangan and are used to run and improve the directory. Your own business information — what you make, how you make it, your recipes, designs and materials — remains entirely yours.",
     ],
   },
@@ -125,9 +123,9 @@ export const TERMS: Clause[] = [
 
 /** Shown under the acceptance checkbox and at the foot of the terms page. */
 export const TERMS_PLAIN_SUMMARY = [
-  "Listing is free; you pay only for enquiries you accept, and the first 10 are free.",
+  "Listing is free, and so is taking an enquiry — for the whole pilot.",
   "Aangan takes no cut of your earnings and never handles your customers' money.",
   "You are responsible for the work itself, and for any licences it needs.",
-  "Once you have paid for an introduction, that customer is yours with no strings.",
+  "A customer who finds you here is yours, with no strings and no exclusivity.",
   "Either side can walk away with a week's notice.",
 ];

@@ -49,12 +49,12 @@ export default function Availability({
             <>
               <b>Your listing is closed.</b> All {totalListings} of your listings
               are hidden and no new requests can reach you. If you want to come
-              back, message an administrator — reopening is their side of the
-              switch, not yours.
+              back, get in touch — reopening is not something you can do
+              yourself.
             </>
           ) : (
             <>
-              <b>Your listing has been suspended by a moderator.</b> All{" "}
+              <b>Your listing has been suspended.</b> All{" "}
               {totalListings} of your listings are hidden. Please get in touch to
               sort it out — nothing is being charged while it is suspended.
             </>
@@ -127,8 +127,8 @@ export default function Availability({
             <p className="text-body text-charcoal-soft leading-relaxed mb-3">
               Closing removes you from the directory permanently. Your past
               requests are kept, and anything you still owe stays owed. You
-              can&rsquo;t undo this yourself — an administrator would have to
-              reopen it.
+              can&rsquo;t undo this yourself — reopening it has to be done for
+              you.
             </p>
             <label className="flex gap-2.5 items-start cursor-pointer mb-3">
               <input

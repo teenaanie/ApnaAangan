@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
-import { decideAdditionalInfo, moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
+import { decideAdditionalInfo, decidePhoto, moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { emailIsConfigured } from "@/lib/email";
 import { rupees } from "@/lib/brand";
 import { waLink, waProviderNudge } from "@/lib/whatsapp";
-import { resolvedSiteUrl } from "@/lib/site";
+import { photoBase, resolvedSiteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -41,6 +41,23 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false }).limit(15),
     supabase.from("providers").select("status, leads_total, leads_accepted, balance_paise"),
   ]);
+
+  // Photos waiting to be looked at. A photo is the easiest place to hide a
+  // phone number or somebody else's work, so it queues like listing text does.
+  const photosRes = await supabase
+    .from("listing_photos")
+    .select("id, storage_path, created_at, listings(title, providers(public_id, display_name))")
+    .eq("status", "pending")
+    .order("created_at")
+    .limit(30);
+
+  const pendingPhotos = (photosRes.data ?? []) as unknown as Array<{
+    id: string;
+    storage_path: string;
+    created_at: string;
+    listings: { title: string; providers: { public_id: string; display_name: string } | null } | null;
+  }>;
+  const photoBaseUrl = photoBase();
 
   // Rejections are decisions too, and until now they vanished without trace —
   // no record that a judgement was made, and no way back from a misclick.
@@ -154,7 +171,8 @@ export default async function AdminPage() {
   const owed = all.reduce((s, p) => s + (p.balance_paise ?? 0), 0);
 
   const queue =
-    pendingProviders.length + pendingListings.length + pendingUpdates.length + pendingInfo.length;
+    pendingProviders.length + pendingListings.length + pendingUpdates.length +
+    pendingInfo.length + pendingPhotos.length;
 
   return (
     <>
@@ -165,6 +183,12 @@ export default async function AdminPage() {
           <div className="flex flex-wrap items-start gap-3">
             <h1 className="mb-1">Admin</h1>
             <div className="flex-1" />
+            <Link
+              href="/admin/rates"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+            >
+              Rate card
+            </Link>
             <Link
               href="/admin/societies"
               className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
@@ -444,6 +468,45 @@ export default async function AdminPage() {
                     <form action={moderateListing}>
                       <input type="hidden" name="id" value={l.id} />
                       <input type="hidden" name="status" value="rejected" />
+                      <Button type="submit" variant="danger">Reject</Button>
+                    </form>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <SectionHeader>Photos awaiting a look · {pendingPhotos.length}</SectionHeader>
+          {pendingPhotos.length === 0 ? (
+            <Empty title="No photos waiting">
+              A photo appears on a listing only after you have seen it.
+            </Empty>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mb-9">
+              {pendingPhotos.map((ph) => (
+                <Card key={ph.id} className="p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`${photoBaseUrl}/${ph.storage_path}`}
+                    alt=""
+                    className="w-full aspect-square object-cover rounded-xl border border-sandstone-soft mb-2.5"
+                  />
+                  <p className="text-body font-bold m-0 text-charcoal">
+                    {ph.listings?.title ?? "a listing"}
+                  </p>
+                  <p className="text-caption text-charcoal-soft m-0 mb-2.5">
+                    {ph.listings?.providers?.display_name}
+                    {ph.listings?.providers?.public_id ? ` · ${ph.listings.providers.public_id}` : ""}
+                  </p>
+                  <div className="flex gap-2">
+                    <form action={decidePhoto} className="flex-1">
+                      <input type="hidden" name="id" value={ph.id} />
+                      <input type="hidden" name="approve" value="yes" />
+                      <Button type="submit" variant="sage" full>Approve</Button>
+                    </form>
+                    <form action={decidePhoto}>
+                      <input type="hidden" name="id" value={ph.id} />
+                      <input type="hidden" name="approve" value="no" />
                       <Button type="submit" variant="danger">Reject</Button>
                     </form>
                   </div>

@@ -196,3 +196,89 @@ export async function getReviewsForProvider(providerId: string): Promise<PublicR
     .limit(8);
   return (data as PublicReview[]) ?? [];
 }
+
+/**
+ * Is the platform charging at all?
+ *
+ * Read from the database rather than an environment variable, so the interface
+ * and the billing trigger can never disagree — a variable set on the app while
+ * the trigger kept charging would be exactly the silent-debt problem the free
+ * pilot exists to avoid. See migration 0020.
+ *
+ * Defaults to false if the setting is unreachable: showing no money when money
+ * is due is a smaller error than announcing a fee that is not being taken.
+ */
+export async function getBillingEnabled(): Promise<boolean> {
+  if (!isConfigured()) return false;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("billing_enabled");
+  return data === true;
+}
+
+/**
+ * The one thing a provider wants said today, on their own page.
+ *
+ * Today's menu, a limited batch, a newly free slot. It already powers the
+ * "Happening today" rail on the directory, but it was never shown on the
+ * provider's own page — which is the page they actually hand out on a QR code,
+ * and therefore the one place a returning customer looks to see what is on.
+ *
+ * Approved and unexpired only, newest first. One post is enough: this is a
+ * headline, not a feed.
+ */
+export async function getTodayForProvider(providerId: string) {
+  if (!isConfigured()) return null;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("provider_updates")
+    .select("id, kind, headline, detail, valid_until, qty_left, created_at")
+    .eq("provider_id", providerId)
+    .eq("status", "approved")
+    .gt("valid_until", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as {
+    id: string;
+    kind: string | null;
+    headline: string;
+    detail: string | null;
+    valid_until: string;
+    qty_left: number | null;
+    created_at: string;
+  } | null;
+}
+
+/** Every photo belonging to this provider, including ones still being checked. */
+export async function getPhotosForProvider(providerId: string) {
+  if (!isConfigured()) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("listing_photos")
+    .select("id, listing_id, storage_path, status, sort, created_at")
+    .eq("provider_id", providerId)
+    .order("sort")
+    .order("created_at");
+  return (data ?? []) as {
+    id: string; listing_id: string; storage_path: string;
+    status: "pending" | "approved" | "rejected"; sort: number; created_at: string;
+  }[];
+}
+
+/** Approved photos for a set of listings, for the public pages. */
+export async function getApprovedPhotos(listingIds: string[]) {
+  if (!isConfigured() || listingIds.length === 0) return {} as Record<string, string[]>;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("listing_photos")
+    .select("listing_id, storage_path")
+    .in("listing_id", listingIds)
+    .eq("status", "approved")
+    .order("sort")
+    .order("created_at");
+  const out: Record<string, string[]> = {};
+  for (const row of (data ?? []) as { listing_id: string; storage_path: string }[]) {
+    (out[row.listing_id] ||= []).push(row.storage_path);
+  }
+  return out;
+}

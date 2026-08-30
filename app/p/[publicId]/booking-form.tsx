@@ -87,6 +87,18 @@ export default function BookingForm({
         </Field>
       </div>
 
+      {/* Aangan grows by providers sharing their link with customers they
+          already have, and those customers live wherever they live. Flat alone
+          assumes the same society, which is usually true and not always. */}
+      <Field label="Full address" hint="only if you are outside their society">
+        <input
+          name="address"
+          maxLength={400}
+          className={inputClass}
+          placeholder="Flat 12, Sunrise Apartments, Baner Road"
+        />
+      </Field>
+
       <Field label="Preferred time" hint="optional">
         <input
           name="when"
