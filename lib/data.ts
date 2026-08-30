@@ -144,7 +144,22 @@ export async function getLiveUpdates(opts: {
   }
 
   const { data } = await query;
-  return (data as unknown as LiveUpdate[]) ?? [];
+  const rows = (data as unknown as LiveUpdate[]) ?? [];
+
+  // At most one card per provider on the rail.
+  //
+  // Updates became per-listing in migration 0024, so a baker who also teaches
+  // can post about both. That is right on their own page and wrong here: the
+  // rail is a glance at which neighbours have something on today, and one
+  // person occupying three of its twelve slots crowds out three others. The
+  // newest wins; the rest are a tap away on their page.
+  const seen = new Set<string>();
+  return rows.filter((u) => {
+    const key = (u as unknown as { providers?: { public_id?: string } }).providers?.public_id ?? u.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export async function getProviderByPublicId(publicId: string) {
@@ -226,27 +241,48 @@ export async function getBillingEnabled(): Promise<boolean> {
  * Approved and unexpired only, newest first. One post is enough: this is a
  * headline, not a feed.
  */
-export async function getTodayForProvider(providerId: string) {
-  if (!isConfigured()) return null;
+export type ProviderUpdate = {
+  id: string;
+  listing_id: string | null;
+  kind: string | null;
+  headline: string;
+  detail: string | null;
+  valid_until: string | null;
+  qty_left: number | null;
+  created_at: string;
+};
+
+export async function getTodayForProvider(providerId: string): Promise<{
+  /** The one that applies to everything — shown above all their listings. */
+  page: ProviderUpdate | null;
+  /** Tagged to a listing, keyed by listing id — shown on that listing's card. */
+  byListing: Record<string, ProviderUpdate>;
+}> {
+  const empty = { page: null, byListing: {} as Record<string, ProviderUpdate> };
+  if (!isConfigured()) return empty;
   const supabase = await createClient();
+
+  // Expiry is `expires_at`, a real timestamp the database sets. `valid_until`
+  // is free text the provider chose ("Orders close 11 am") and was never a
+  // date — comparing it to now() only ever worked by accident.
   const { data } = await supabase
     .from("provider_updates")
-    .select("id, kind, headline, detail, valid_until, qty_left, created_at")
+    .select("id, listing_id, kind, headline, detail, valid_until, qty_left, created_at")
     .eq("provider_id", providerId)
     .eq("status", "approved")
-    .gt("valid_until", new Date().toISOString())
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data as {
-    id: string;
-    kind: string | null;
-    headline: string;
-    detail: string | null;
-    valid_until: string;
-    qty_left: number | null;
-    created_at: string;
-  } | null;
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+
+  const rows = (data ?? []) as ProviderUpdate[];
+  const out = { page: null as ProviderUpdate | null, byListing: {} as Record<string, ProviderUpdate> };
+  for (const r of rows) {
+    if (!r.listing_id) {
+      out.page ??= r;
+    } else {
+      out.byListing[r.listing_id] ??= r;
+    }
+  }
+  return out;
 }
 
 /** Every photo belonging to this provider, including ones still being checked. */

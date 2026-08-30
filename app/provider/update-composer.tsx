@@ -32,13 +32,38 @@ function Submit() {
   );
 }
 
-export default function UpdateComposer() {
+export default function UpdateComposer({
+  listings = [],
+}: {
+  /** The provider's live listings. Only shown as a choice when there is more
+      than one — asking "which listing?" of someone with a single listing is a
+      question with one answer. */
+  listings?: { id: string; title: string }[];
+}) {
   const [state, action] = useActionState<ActionState, FormData>(postUpdate, {});
   const [kind, setKind] = useState<string>("announcement");
 
   return (
     <Card className="p-5">
       <form action={action}>
+        {listings.length > 1 && (
+          <Field label="What is this about?">
+            <select name="listing_id" className={inputClass} defaultValue="">
+              {listings.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.title}
+                </option>
+              ))}
+              <option value="">Everything I offer</option>
+            </select>
+            <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+              An update tagged to a listing shows on that listing. Pick
+              &ldquo;everything I offer&rdquo; for something that applies to all
+              of them — away for a week, a change of address.
+            </span>
+          </Field>
+        )}
+
         <Field label="What do you want neighbours to know?" hint="one line">
           <input
             name="headline"
@@ -104,8 +129,9 @@ export default function UpdateComposer() {
         <div className="flex items-center gap-4 flex-wrap">
           <Submit />
           <span className="text-caption text-charcoal-faint max-w-sm leading-snug">
-            One a day, and it disappears on its own after two days. A feed of last
-            week&rsquo;s specials is worse than an empty one.
+            One at a time {listings.length > 1 ? "per listing" : ""}, and it
+            disappears on its own after two days. A feed of last week&rsquo;s
+            specials is worse than an empty one.
           </span>
         </div>
       </form>

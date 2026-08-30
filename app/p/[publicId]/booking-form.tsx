@@ -30,20 +30,55 @@ function Submit() {
  */
 export default function BookingForm({
   publicId,
+  listings,
   listingId,
   providerName,
 }: {
   publicId: string;
+  /** Everything this provider offers. When there is more than one, the visitor
+      has to be asked which — see the comment on the selector below. */
+  listings: { id: string; title: string }[];
   listingId?: string;
   providerName: string;
 }) {
   const [state, action] = useActionState<BookingState, FormData>(createBooking, {});
   const [phone, setPhone] = useState("");
+  const [chosen, setChosen] = useState(listingId ?? "");
+
+  const many = listings.length > 1;
 
   return (
     <form action={action}>
       <input type="hidden" name="public_id" value={publicId} />
-      {listingId && <input type="hidden" name="listing_id" value={listingId} />}
+      {!many && listingId && (
+        <input type="hidden" name="listing_id" value={listingId} />
+      )}
+
+      {/* Ask which one, once there is more than one.
+          This form used to attach every request to whichever listing happened
+          to be first on the page. A neighbour who came for English tuition
+          would send a request filed under Eggless cakes, and neither of them
+          would ever know: the provider reads "tuition for my son" against a
+          cake listing and the resident sees nothing wrong at all. Silent and
+          confidently incorrect is the worst kind of wrong, so the question is
+          asked rather than guessed. */}
+      {many && (
+        <Field label="Which one?" hint="so they know what you mean">
+          <select
+            name="listing_id"
+            value={chosen}
+            onChange={(e) => setChosen(e.target.value)}
+            className={inputClass}
+          >
+            {listings.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.title}
+              </option>
+            ))}
+            <option value="">Something else</option>
+          </select>
+        </Field>
+      )}
 
       <Field label="What are you looking for?" hint="the provider sees this">
         <textarea

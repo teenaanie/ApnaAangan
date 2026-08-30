@@ -104,13 +104,15 @@ export default async function ProviderDashboard({
               </p>
             </div>
             <div className="flex-1" />
+            {/* One button, not three.
+                Sharing and viewing are both things you do to a listing, and
+                both now live on the listing itself — a link and a QR per
+                listing, and "See it live" on each card. Three buttons here
+                asked the provider to choose between destinations that all led
+                to variations of the same place. */}
             <div className="flex gap-2 flex-wrap">
-              <LinkButton href="/provider/share" variant="sage">
-                Share &amp; QR code
-              </LinkButton>
-              <LinkButton href="/provider/listings" variant="ghost">Listings</LinkButton>
-              <LinkButton href={`/p/${provider.public_id}`} variant="ghost">
-                View my page
+              <LinkButton href="/provider/listings" variant="sage">
+                My listings
               </LinkButton>
             </div>
           </div>
@@ -251,7 +253,14 @@ export default async function ProviderDashboard({
           {/* -------------------------------------------------------- compose */}
           <div className="mt-9">
             <SectionHeader>Post an update</SectionHeader>
-            <UpdateComposer />
+            {/* Only listings a neighbour can actually reach are offered as a
+                target. An update on a paused listing would be a headline on a
+                page nobody can open. */}
+            <UpdateComposer
+              listings={myListings
+                .filter((l) => l.status === "approved" && l.is_active && !l.paused_at)
+                .map((l) => ({ id: l.id, title: l.title }))}
+            />
           </div>
 
           {/* --------------------------------------------------------- recent */}

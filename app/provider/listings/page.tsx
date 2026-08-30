@@ -206,12 +206,20 @@ export default async function ListingsPage() {
                             a page that does not show it, which reads as a
                             broken link rather than as "not approved yet". */}
                         {v.live && (
-                          <Link
-                            href={`/p/${provider.public_id}?listing=${l.id}#l-${l.id}`}
-                            className="block text-caption font-bold text-charcoal-soft hover:text-terracotta-deep mt-1.5"
-                          >
-                            See it live →
-                          </Link>
+                          <>
+                            <Link
+                              href={`/p/${provider.public_id}?listing=${l.id}#l-${l.id}`}
+                              className="block text-caption font-bold text-charcoal-soft hover:text-terracotta-deep mt-1.5"
+                            >
+                              See it live →
+                            </Link>
+                            <Link
+                              href={`/provider/share?listing=${l.id}`}
+                              className="block text-caption font-bold text-terracotta-deep hover:underline mt-1"
+                            >
+                              Share &amp; QR →
+                            </Link>
+                          </>
                         )}
                       </div>
                     </div>

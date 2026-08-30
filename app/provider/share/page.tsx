@@ -1,43 +1,42 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import QRCode from "qrcode";
 import Nav from "@/components/nav";
 import CopyLink from "./copy-link";
-import { Badge, Card, Empty, LinkButton, Note, SectionHeader, Shell } from "@/components/ui";
+import { Badge, Card, Note, SectionHeader, Shell } from "@/components/ui";
 import { getListingsForProvider, getMyProvider, isConfigured } from "@/lib/data";
 import { Logo } from "@/components/logo";
-import { Download, CategoryIcon } from "@/components/icons";
+import { Download } from "@/components/icons";
 import { absoluteLink } from "@/lib/site";
-import { VERIFICATION } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Share your link" };
 
-export default async function SharePage() {
+/** Terracotta on Courtyard Cream. Contrast is 3.39:1 — far above the 2:1
+ *  scanners need, and the light module is the palette's own background rather
+ *  than a white that would show as a bright rectangle on a cream poster. */
+const QR_OPTS = {
+  width: 600,
+  margin: 1,
+  color: { dark: "#c86840", light: "#f8f1e3" },
+} as const;
+
+export default async function SharePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ listing?: string }>;
+}) {
   if (!isConfigured()) redirect("/");
   const provider = await getMyProvider();
   if (!provider) redirect("/provider/onboarding");
-
-  const url = await absoluteLink(`/p/${provider.public_id}`);
-
-  const qr = await QRCode.toDataURL(url, {
-    width: 600,
-    margin: 1,
-    // Terracotta on Courtyard Cream, so a printed QR sits on the same ground as
-    // the card it is shown in. Contrast is 3.39:1 — far above the 2:1 scanners
-    // need, and the light module is the palette's own background rather than a
-    // white that would show as a bright rectangle on a cream poster.
-    color: { dark: "#c86840", light: "#f8f1e3" },
-  });
-
-  const waText = encodeURIComponent(
-    `Hello! You can now see everything I make and place an order here: ${url}`
-  );
+  const sp = await searchParams;
 
   // Read through listing_cards — the same view residents read. Anything hidden
   // by a pause, a moderation hold or a suspension is absent here for exactly
   // the reason it is absent for them, so this cannot drift out of agreement
   // with the real page.
   const live = await getListingsForProvider(provider.id);
+  const one = live.find((l) => l.id === sp.listing);
 
   /* What a neighbour actually gets on the other end of the link.
      Important: while a provider is anything other than active, their page does
@@ -48,170 +47,152 @@ export default async function SharePage() {
   const dead = provider.status !== "active";
   const hiddenReason =
     provider.status === "pending"
-      ? "Your listing is still awaiting approval. Until it is approved, this link does not open for anyone but you."
+      ? "Your listing is still awaiting approval. Until it is approved, these links do not open for anyone but you."
       : provider.status === "paused"
-      ? "You have paused everything, so this link does not open for anyone but you."
+      ? "You have paused everything, so these links do not open for anyone but you."
       : provider.status === "suspended"
-      ? "Your listing is suspended, so this link does not open for anyone but you."
+      ? "Your listing is suspended, so these links do not open for anyone but you."
       : provider.status === "closed"
-      ? "Your listing is closed, so this link does not open for anyone but you."
+      ? "Your listing is closed, so these links do not open for anyone but you."
       : live.length === 0
       ? "Your page opens, but there is nothing on it yet — your listings are either awaiting approval or paused."
       : null;
+
+  /* One shareable per listing, plus the whole page.
+     A QR on a cake box should open the cakes, not a menu the customer then has
+     to read past. The whole-page link stays because it is the right one for a
+     WhatsApp status or a notice board, where the point is "here is everything
+     I do". */
+  const pageUrl = await absoluteLink(`/p/${provider.public_id}`);
+  const shareables = [
+    ...(one
+      ? []
+      : [
+          {
+            key: "page",
+            title: "Everything I offer",
+            sub: `${live.length} listing${live.length === 1 ? "" : "s"} on one page`,
+            url: pageUrl,
+            wa: `Hello! You can now see everything I make and place an order here: ${pageUrl}`,
+            file: `aangan-${provider.public_id}.png`,
+          },
+        ]),
+    ...(await Promise.all(
+      (one ? [one] : live).map(async (l) => {
+        const url = await absoluteLink(`/p/${provider.public_id}?listing=${l.id}#l-${l.id}`);
+        return {
+          key: l.id,
+          title: l.title,
+          sub: l.category_label ?? "One listing",
+          url,
+          wa: `Hello! You can see this and place an order here: ${url}`,
+          file: `aangan-${provider.public_id}-${l.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "")}.png`,
+        };
+      })
+    )),
+  ];
+
+  const qrs = await Promise.all(shareables.map((s) => QRCode.toDataURL(s.url, QR_OPTS)));
 
   return (
     <>
       <Nav subtitle="Provider" />
       <Shell>
         <div className="max-w-lg py-10">
-          <h1 className="mb-1.5">Share your link</h1>
+          <h1 className="mb-1.5">{one ? `Share ${one.title}` : "Share your links"}</h1>
           <p className="text-charcoal-soft text-body mb-7">
-            Put this in your WhatsApp status, on your delivery boxes, or straight into
-            the customer group you already have. It saves you retyping your menu every
-            morning — and every person who arrives through it can find your neighbours too.
+            Put these in your WhatsApp status, on your delivery boxes, or straight
+            into the customer group you already have. It saves you retyping your
+            menu every morning — and every person who arrives through one can find
+            your neighbours too.
           </p>
 
-          <SectionHeader>Your link</SectionHeader>
-          <CopyLink url={url} waText={waText} />
-
-          <div className="mt-3">
-            <LinkButton href={`/p/${provider.public_id}`} variant="ghost">
-              Open my page as a neighbour sees it
-            </LinkButton>
-          </div>
-
-          {/* What is actually on the other end of the link. A provider handing
-              out a QR deserves to know whether it currently leads to anything —
-              finding out from a customer is the worst way to learn it. */}
-          <div className="mt-8">
-            <SectionHeader>
-              What people find there · {live.length} listing{live.length === 1 ? "" : "s"}
-            </SectionHeader>
-
-            {hiddenReason ? (
-              <Note tone="mustard">
-                <b>{hiddenReason}</b>{" "}
-                {dead ? (
-                  <>
-                    Wait until it is live before you print the QR code or send
-                    the link — right now it would take a neighbour to a
-                    &ldquo;page not found&rdquo;. The address itself never
-                    changes, so it will work the moment you are back.
-                  </>
-                ) : (
-                  <>
-                    Sharing it now would send people to an empty page. Add or
-                    resume a listing first.
-                  </>
-                )}
-              </Note>
-            ) : (
-              <div className="grid gap-3">
-                <Card className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-sandstone-soft border border-sandstone-soft grid place-items-center text-icon shrink-0">
-                      {live[0]?.icon || "✦"}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-body m-0">
-                        {provider.display_name}
-                      </p>
-                      <p className="text-caption text-charcoal-soft mt-0.5">
-                        <span className="font-mono">{provider.public_id}</span>
-                        {live[0]?.locality_name ? ` · ${live[0].locality_name}` : ""}
-                      </p>
-                      {provider.verified_id && (
-                        <div className="mt-1.5">
-                          <Badge tone="sage">{VERIFICATION.label}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {live.map((l) => (
-                  <Card key={l.id} className="p-4">
-                    <div className="flex items-start gap-2.5">
-                      <span className="text-icon leading-none">{l.icon || "✦"}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-body m-0">{l.title}</p>
-                        {l.description && (
-                          <p className="text-caption text-charcoal-soft leading-snug mt-1 m-0">
-                            {l.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {l.price_from != null && (
-                            <span className="text-caption font-bold">
-                              ₹{l.price_from.toLocaleString("en-IN")}{" "}
-                              <span className="font-normal text-charcoal-faint">
-                                {l.price_unit}
-                              </span>
-                            </span>
-                          )}
-                          {l.availability && <Badge>{l.availability}</Badge>}
-                          {l.category_label && (
-                            <Badge>
-                              <CategoryIcon slug={l.category_slug} emoji={l.category_icon} size={12} />
-                              {l.category_label}
-                            </Badge>
-                          )}
-                        </div>
-                        {/* Additional info belongs to the listing, not the person.
-                            It is shown here inside the listing it describes, so
-                            this preview matches what a neighbour actually sees. */}
-                        {l.additional_info && (
-                          <div className="mt-2.5 pt-2.5 border-t border-sandstone-soft">
-                            <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
-                              Today
-                            </p>
-                            <p className="text-caption text-charcoal-soft leading-relaxed m-0 whitespace-pre-line">
-                              {l.additional_info}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-8">
-            <SectionHeader>Your QR code</SectionHeader>
-            <Card className="p-6 text-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qr} alt={`QR code for ${url}`} className="w-52 h-52 mx-auto" />
-              {/* Vertical lockup, 140px mark: the printed minimum for the full
-                  logo is 20mm, and this clears it at any sane print scale. */}
-              <div className="mt-4 flex justify-center">
-                <Logo variant="vertical" markSize={140} href={null} />
-              </div>
-              <p className="text-caption text-charcoal-soft mt-0.5">
-                {provider.display_name} · {provider.public_id}
-              </p>
-              {/* "Right-click to save" is desktop advice given to people who are
-                  almost always on a phone. A download link works on both. */}
-              <a
-                href={qr}
-                download={`aangan-${provider.public_id}.png`}
-                className="inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
+          {one && (
+            <p className="mb-6">
+              <Link
+                href="/provider/share"
+                className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
               >
-                <Download size={15} />
-                Save the QR code
-              </a>
-              <p className="text-caption text-charcoal-faint mt-3">
-                Print it for a notice board, or stick it on a delivery box.
-              </p>
-            </Card>
-          </div>
+                ← All my links
+              </Link>
+            </p>
+          )}
 
-          <div className="mt-7">
+          {hiddenReason ? (
+            <Note tone="mustard">
+              <b>{hiddenReason}</b>{" "}
+              {dead ? (
+                <>
+                  Wait until it is live before you print a QR code or send a
+                  link — right now it would take a neighbour to a &ldquo;page
+                  not found&rdquo;. The addresses never change, so they will
+                  work the moment you are back.
+                </>
+              ) : (
+                <>
+                  Sharing now would send people to an empty page. Add or resume
+                  a listing first.
+                </>
+              )}
+            </Note>
+          ) : (
+            <div className="grid gap-6">
+              {shareables.map((s, i) => (
+                <div key={s.key}>
+                  <SectionHeader>
+                    {s.title}
+                    {s.key === "page" && (
+                      <>
+                        {" "}
+                        <Badge>whole page</Badge>
+                      </>
+                    )}
+                  </SectionHeader>
+                  <p className="text-caption text-charcoal-faint -mt-2 mb-2.5">{s.sub}</p>
+
+                  <CopyLink url={s.url} waText={encodeURIComponent(s.wa)} />
+
+                  <Card className="p-6 text-center mt-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrs[i]}
+                      alt={`QR code for ${s.title}`}
+                      className="w-44 h-44 mx-auto"
+                    />
+                    {/* Vertical lockup, 120px mark: the printed minimum for the
+                        full logo is 20mm, and this clears it at any sane print
+                        scale. */}
+                    <div className="mt-3 flex justify-center">
+                      <Logo variant="vertical" markSize={120} href={null} />
+                    </div>
+                    <p className="text-caption text-charcoal-soft mt-0.5">
+                      {provider.display_name} · {s.key === "page" ? provider.public_id : s.title}
+                    </p>
+                    {/* "Right-click to save" is desktop advice given to people
+                        who are almost always on a phone. A download link works
+                        on both. */}
+                    <a
+                      href={qrs[i]}
+                      download={s.file}
+                      className="inline-flex items-center gap-1.5 mt-4 rounded-full px-4 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
+                    >
+                      <Download size={15} />
+                      Save this QR code
+                    </a>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8">
             <Note>
-              This is the whole growth model. Twenty providers each sharing with fifteen
-              existing customers is three hundred residents — with nobody&rsquo;s
-              permission needed.
+              This is the whole growth model. Twenty providers each sharing with
+              fifteen existing customers is three hundred residents — with
+              nobody&rsquo;s permission needed.
             </Note>
           </div>
         </div>

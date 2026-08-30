@@ -179,19 +179,18 @@ export async function postUpdate(
     .from("providers").select("id").eq("user_id", user.id).maybeSingle();
   if (!provider) return { error: "Set up your provider profile first." };
 
-  // One update per provider per day — the cap that keeps the feed worth opening.
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await supabase
-    .from("provider_updates")
-    .select("id", { count: "exact", head: true })
-    .eq("provider_id", provider.id)
-    .gt("created_at", since);
+  // Which listing this is about. Empty means the whole page — "away until
+  // Monday" belongs above everything, not filed under one listing.
+  const listingId = String(formData.get("listing_id") || "") || null;
 
-  if ((count ?? 0) >= 1)
-    return { error: "One update a day. Yours is already posted — try again tomorrow." };
-
+  // The cap is enforced by a trigger (migration 0024), not here: one live
+  // update per listing, plus one for the provider as a whole. It used to be
+  // counted in this function alone, which meant it only applied to people who
+  // went through this form. The trigger's message is written for the provider
+  // to read, so it is passed through rather than replaced.
   const { error } = await supabase.from("provider_updates").insert({
     provider_id: provider.id,
+    listing_id: listingId,
     kind,
     headline,
     detail: detail || null,

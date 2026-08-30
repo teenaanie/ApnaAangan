@@ -129,20 +129,24 @@ export default async function ProviderPage({
                 first. This is the post that already drives "Happening today"
                 on the directory; it was never shown on the page a provider
                 actually hands out on a QR code. */}
-            {today && (
+            {/* Only what applies to everything they do sits up here. An update
+                about one listing now shows on that listing's card instead —
+                "today's biryani" above an English tuition listing helped
+                nobody. */}
+            {today.page && (
               <div className="mb-6">
                 <Card className="p-4 bg-mustard-tint border-mustard/25">
                   <p className="text-caption font-bold text-mustard m-0 mb-1 flex items-center gap-1.5">
                     <Clock size={13} />
                     Today
-                    {today.qty_left != null && today.qty_left > 0 && (
-                      <span className="font-normal">· {today.qty_left} left</span>
+                    {today.page.qty_left != null && today.page.qty_left > 0 && (
+                      <span className="font-normal">· {today.page.qty_left} left</span>
                     )}
                   </p>
-                  <p className="text-subheading text-charcoal m-0">{today.headline}</p>
-                  {today.detail && (
+                  <p className="text-subheading text-charcoal m-0">{today.page.headline}</p>
+                  {today.page.detail && (
                     <p className="text-body text-charcoal-soft leading-relaxed m-0 mt-1">
-                      {today.detail}
+                      {today.page.detail}
                     </p>
                   )}
                 </Card>
@@ -161,6 +165,30 @@ export default async function ProviderPage({
                      to the top of their page. scroll-mt clears the sticky nav,
                      without which the card lands underneath it. */
                   <Card key={l.id} id={`l-${l.id}`} className="p-4 scroll-mt-24">
+                    {/* This listing's own "what's on today", if there is one. */}
+                    {today.byListing[l.id] && (
+                      <div className="-m-4 mb-3 p-3 rounded-t-2xl bg-mustard-tint border-b border-mustard/25">
+                        <p className="text-caption font-bold text-mustard m-0 mb-0.5 flex items-center gap-1.5">
+                          <Clock size={13} />
+                          Today
+                          {today.byListing[l.id].qty_left != null &&
+                            today.byListing[l.id].qty_left! > 0 && (
+                              <span className="font-normal">
+                                · {today.byListing[l.id].qty_left} left
+                              </span>
+                            )}
+                        </p>
+                        <p className="text-body font-bold text-charcoal m-0">
+                          {today.byListing[l.id].headline}
+                        </p>
+                        {today.byListing[l.id].detail && (
+                          <p className="text-caption text-charcoal-soft m-0 mt-0.5">
+                            {today.byListing[l.id].detail}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* The photograph does more selling than any description,
                         so it goes above the words rather than beside them. */}
                     {(photos[l.id]?.length ?? 0) > 0 && (
@@ -214,6 +242,18 @@ export default async function ProviderPage({
                         {l.additional_info}
                       </p>
                     )}
+
+                    {/* Only worth showing when there is a choice to make. With
+                        one listing the form below is unambiguous already, and
+                        a button that just scrolls the page is noise. */}
+                    {isActive && listings.length > 1 && (
+                      <a
+                        href={`?listing=${l.id}#book`}
+                        className="inline-block mt-3 text-body font-bold text-terracotta-deep underline underline-offset-2"
+                      >
+                        Request this →
+                      </a>
+                    )}
                   </Card>
                 ))}
               </div>
@@ -233,7 +273,7 @@ export default async function ProviderPage({
 
           {/* ------------------------------------------------------- booking */}
           <div className="lg:sticky lg:top-24">
-            <Card className="p-5">
+            <Card id="book" className="p-5 scroll-mt-24">
               <h2 className="m-0 mb-1">Request a booking</h2>
               <p className="text-caption text-charcoal-soft mb-4">
                 No account needed. No phone numbers are exchanged until they accept.
@@ -247,6 +287,7 @@ export default async function ProviderPage({
               ) : (
                 <BookingForm
                   publicId={provider.public_id}
+                  listings={listings.map((l) => ({ id: l.id, title: l.title }))}
                   listingId={focus?.id}
                   providerName={provider.display_name}
                 />
