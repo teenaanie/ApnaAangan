@@ -5,7 +5,7 @@ import AddListing from "./add-listing";
 import EditListing from "./edit-listing";
 import AdditionalInfo from "./additional-info";
 import { setListingPaused } from "../actions";
-import { Badge, Button, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
+import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getCategories, getMyProvider, isConfigured } from "@/lib/data";
 
@@ -80,8 +80,9 @@ export default async function ListingsPage() {
   return (
     <>
       <Nav subtitle="Provider" />
+      <WideShell />
       <Shell>
-        <div className="py-9 max-w-2xl">
+        <div className="py-9">
           <div className="flex flex-wrap items-start gap-3 mb-1">
             <h1 className="m-0">Your listings</h1>
             <div className="flex-1" />
@@ -236,16 +237,20 @@ export default async function ListingsPage() {
             </>
           )}
 
-          <SectionHeader>Additional info</SectionHeader>
-          <div className="mb-9">
-            <AdditionalInfo
-              live={provider.additional_info}
-              pending={provider.additional_info_pending}
-            />
-          </div>
+          {/* The lists above use the full width; a form does not — a text field
+              1200px wide is harder to fill in, not easier. */}
+          <div className="max-w-2xl">
+            <SectionHeader>Additional info</SectionHeader>
+            <div className="mb-9">
+              <AdditionalInfo
+                live={provider.additional_info}
+                pending={provider.additional_info_pending}
+              />
+            </div>
 
-          <SectionHeader>Add another</SectionHeader>
-          <AddListing categories={categories} />
+            <SectionHeader>Add another</SectionHeader>
+            <AddListing categories={categories} />
+          </div>
         </div>
       </Shell>
     </>

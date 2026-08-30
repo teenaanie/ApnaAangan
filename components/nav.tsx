@@ -2,7 +2,7 @@ import Link from "next/link";
 import BackLink from "@/components/back-link";
 import { Logo } from "@/components/ui";
 import { getMyProvider, getProfile } from "@/lib/data";
-import { Info } from "@/components/icons";
+import { Info, LogOut } from "@/components/icons";
 
 /**
  * Residents never sign in, so they are never shown a sign-in link. The only
@@ -18,7 +18,7 @@ export default async function Nav({ subtitle }: { subtitle?: string }) {
 
   return (
     <header className="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-sandstone-soft">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div className="max-w-[var(--shell)] mx-auto px-4 py-3 flex items-center gap-3">
         <Logo variant="responsive" markSize={60} subtitle={subtitle} />
         <BackLink />
         <div className="flex-1" />
@@ -56,6 +56,25 @@ export default async function Nav({ subtitle }: { subtitle?: string }) {
           >
             Admin
           </Link>
+        )}
+
+        {/* Sign out. A plain form post, so it works with JavaScript off and
+            cannot be triggered by someone linking to the URL — a GET would let
+            any page on the internet sign a provider out by embedding an image.
+            Shown to anyone signed in, which is providers and administrators;
+            residents never have an account to leave. */}
+        {profile && (
+          <form action="/auth/signout" method="post" className="shrink-0">
+            <button
+              type="submit"
+              title="Sign out"
+              aria-label="Sign out"
+              className="inline-flex items-center gap-1.5 rounded-full border border-sandstone bg-surface px-2 sm:pl-2.5 sm:pr-3 py-1.5 text-caption font-bold text-charcoal-soft hover:border-terracotta hover:text-terracotta-deep transition"
+            >
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
+          </form>
         )}
 
         {provider ? (

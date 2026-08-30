@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import AddSociety from "./add-society";
 import EditSociety from "./edit-society";
-import { Badge, Card, Empty, Note, SectionHeader, Shell } from "@/components/ui";
+import { Badge, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { MapPin } from "@/components/icons";
@@ -39,8 +39,9 @@ export default async function Societies() {
   return (
     <>
       <Nav subtitle="Admin" />
+      <WideShell />
       <Shell>
-        <div className="py-9 max-w-2xl">
+        <div className="py-9">
           <div className="flex flex-wrap items-start gap-3 mb-1">
             <h1 className="m-0">Societies</h1>
             <div className="flex-1" />
@@ -102,10 +103,12 @@ export default async function Societies() {
             </div>
           )}
 
-          <SectionHeader>Add a society</SectionHeader>
-          <AddSociety />
+          <div className="max-w-2xl">
+            <SectionHeader>Add a society</SectionHeader>
+            <AddSociety />
+          </div>
 
-          <div className="mt-6">
+          <div className="mt-6 max-w-2xl">
             <Note tone="mustard">
               A new society starts empty, and an empty society loses a resident in
               thirty seconds. Recruit five or six providers there before you tell

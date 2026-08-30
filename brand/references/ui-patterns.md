@@ -41,3 +41,26 @@ something is invisible generates a support message every time.
 
 Never a bare "No results". Say what will appear here and what makes it appear.
 An empty section is the most common thing a new user sees.
+
+## Page width
+
+One custom property, `--shell`, sets the content column. The navigation, the
+page and the footer all read it, so they cannot fall out of line with each
+other.
+
+| | |
+|---|---|
+| **64rem (1024px)** — the default | Reading width. The directory, a provider's page, the FAQ, the agreement, the rate card, sign-in. |
+| **80rem (1280px)** — render `<WideShell />` | Dashboards. The provider dashboard and listings, and all three admin screens. These are stat rows and lists rather than prose, and 1024 left most of a large monitor empty. |
+
+Two rules that go with it:
+
+**A form stays at form width even on a wide page.** The lists on a dashboard
+use the full column; the add-and-edit forms below them are wrapped at
+`max-w-2xl`. A text field 1200px wide is harder to fill in, not easier.
+
+**A row of statistics is a grid, not a flex row.** Six or seven stats in a flex
+row bunch against the left edge with half the card empty beside them. Columns
+keep them evenly spread at any width and fold down on smaller screens.
+
+Assumed, not from the guideline — the guideline says nothing about layout width.

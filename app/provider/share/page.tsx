@@ -6,6 +6,7 @@ import { Badge, Card, Empty, LinkButton, Note, SectionHeader, Shell } from "@/co
 import { getListingsForProvider, getMyProvider, isConfigured } from "@/lib/data";
 import { Logo } from "@/components/logo";
 import { Download, CategoryIcon } from "@/components/icons";
+import { absoluteLink } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Share your link" };
@@ -15,8 +16,7 @@ export default async function SharePage() {
   const provider = await getMyProvider();
   if (!provider) redirect("/provider/onboarding");
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  const url = `${site}/p/${provider.public_id}`;
+  const url = await absoluteLink(`/p/${provider.public_id}`);
 
   const qr = await QRCode.toDataURL(url, {
     width: 600,
@@ -38,17 +38,24 @@ export default async function SharePage() {
   // with the real page.
   const live = await getListingsForProvider(provider.id);
 
+  /* What a neighbour actually gets on the other end of the link.
+     Important: while a provider is anything other than active, their page does
+     not load at all for someone who is not signed in — the database hides the
+     row, and the page returns "not found". This screen used to say the link
+     "works but shows nothing", which is a comfortable thing to read and not
+     true. A provider handing out a QR needs the real answer. */
+  const dead = provider.status !== "active";
   const hiddenReason =
     provider.status === "pending"
-      ? "Your listing is still awaiting approval, so the link works but shows nothing yet."
+      ? "Your listing is still awaiting approval. Until it is approved, this link does not open for anyone but you."
       : provider.status === "paused"
-      ? "You have paused everything, so the link works but shows nothing."
+      ? "You have paused everything, so this link does not open for anyone but you."
       : provider.status === "suspended"
-      ? "Your listing is suspended, so the link shows nothing."
+      ? "Your listing is suspended, so this link does not open for anyone but you."
       : provider.status === "closed"
-      ? "Your listing is closed, so the link shows nothing."
+      ? "Your listing is closed, so this link does not open for anyone but you."
       : live.length === 0
-      ? "Nothing is visible yet — your listings are either awaiting approval or paused."
+      ? "Your page opens, but there is nothing on it yet — your listings are either awaiting approval or paused."
       : null;
 
   return (
@@ -83,13 +90,18 @@ export default async function SharePage() {
             {hiddenReason ? (
               <Note tone="mustard">
                 <b>{hiddenReason}</b>{" "}
-                {provider.status === "paused" || provider.status === "active" ? (
+                {dead ? (
                   <>
-                    Sharing it now would send people to an empty page — resume
-                    first.
+                    Wait until it is live before you print the QR code or send
+                    the link — right now it would take a neighbour to a
+                    &ldquo;page not found&rdquo;. The address itself never
+                    changes, so it will work the moment you are back.
                   </>
                 ) : (
-                  <>The link itself keeps working, so it is still worth saving.</>
+                  <>
+                    Sharing it now would send people to an empty page. Add or
+                    resume a listing first.
+                  </>
                 )}
               </Note>
             ) : (

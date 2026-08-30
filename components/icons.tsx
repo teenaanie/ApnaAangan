@@ -228,6 +228,14 @@ export const MapPin = (p: IconProps) => (
   </Svg>
 );
 
+export const LogOut = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M9.6 20.4H5.4a2 2 0 0 1-2-2V5.6a2 2 0 0 1 2-2h4.2" />
+    <path d="m15.4 16.4 4.4-4.4-4.4-4.4" />
+    <path d="M19.8 12H9.2" />
+  </Svg>
+);
+
 export const Link = (p: IconProps) => (
   <Svg {...p}>
     <path d="M10 13.6a3.8 3.8 0 0 0 5.6.4l2.8-2.8a3.8 3.8 0 0 0-5.4-5.4l-1.5 1.5" />

@@ -95,6 +95,15 @@
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
 
+  /* How wide the content column runs. Nav, page and footer all read this one
+     value, so they can never fall out of line with each other.
+
+     64rem (1024px) is a reading width and is right for the FAQ, the agreement,
+     the rate card and a provider's public page. The dashboards are tables and
+     stat rows rather than prose, and on a large monitor 1024 left most of the
+     screen empty — those pages render <WideShell /> to raise it to 80rem. */
+  :root { --shell: 64rem; }
+
   body {
     background: var(--color-cream);
     color: var(--color-charcoal);

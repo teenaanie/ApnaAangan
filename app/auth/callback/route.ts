@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { siteUrl } from "@/lib/site";
 
 /**
  * Supabase delivers a sign-in link in one of two shapes, depending on the flow
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
-  const base = process.env.NEXT_PUBLIC_SITE_URL || origin;
+  const base = siteUrl() || origin;
 
   // Loud in the terminal: this is the fastest way to see what actually arrived.
   console.log(

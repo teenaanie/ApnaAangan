@@ -15,6 +15,13 @@ import "./globals.css";
 const GOOGLE_FONTS =
   "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Poppins:wght@400;700&display=swap";
 
+/**
+ * Which deployment this is. Vercel sets VERCEL_ENV to "production" only for
+ * the production branch; a preview build of any other branch gets "preview".
+ * Undefined when running locally.
+ */
+const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
+
 export const metadata: Metadata = {
   title: {
     default: `${BRAND.name} — neighbours who make, teach and fix`,
@@ -27,6 +34,10 @@ export const metadata: Metadata = {
     description: BRAND.tagline,
     images: ["/aangan-mark-512.png"],
   },
+  /* Keep every non-production deployment out of search results. A staging copy
+     of a directory is exactly the kind of thing Google will happily index and
+     then show to a resident searching for a tiffin service in Bopodi. */
+  robots: IS_PRODUCTION ? undefined : { index: false, follow: false },
 };
 
 export const viewport: Viewport = { themeColor: "#f8f1e3" };
@@ -40,9 +51,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href={GOOGLE_FONTS} />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* A staging site that looks identical to production is how a test
+            booking ends up on the real directory. This bar is deliberately
+            hard to miss and is never rendered on production. */}
+        {!IS_PRODUCTION && (
+          <div className="bg-mustard text-white text-caption font-bold text-center py-1.5 px-4">
+            Test site — separate database, nothing here is real
+          </div>
+        )}
         <div className="flex-1">{children}</div>
         <footer className="border-t border-sandstone-soft mt-10">
-          <div className="max-w-5xl mx-auto px-4 py-8 text-caption text-charcoal-soft">
+          <div className="max-w-[var(--shell)] mx-auto px-4 py-8 text-caption text-charcoal-soft">
             <div className="flex flex-wrap gap-x-5 gap-y-2 items-center">
               <Logo markSize={60} href={null} />
               <Link href="/" className="hover:text-terracotta-deep">Discover</Link>

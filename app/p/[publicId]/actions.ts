@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { leadEmail, sendMail } from "@/lib/email";
 import { rupees } from "@/lib/brand";
+import { resolvedSiteUrl } from "@/lib/site";
 
 export type BookingState = { error?: string };
 
@@ -62,7 +63,7 @@ export async function createBooking(
   });
 
   if (to) {
-    const site = process.env.NEXT_PUBLIC_SITE_URL || "";
+    const site = await resolvedSiteUrl();
     const fee = Number(res.quoted_fee_paise ?? 2000);
     await sendMail({
       to,

@@ -2,7 +2,35 @@ import { Resend } from "resend";
 
 const key = process.env.RESEND_API_KEY;
 const from = process.env.RESEND_FROM || "Aangan <onboarding@resend.dev>";
+
+/**
+ * Where a reply goes.
+ *
+ * Notifications are sent from a no-reply address, but providers reply to them
+ * anyway — someone confused about a fee or an enquiry hits reply, because that
+ * is what people do. Without this the message vanishes. Set RESEND_REPLY_TO to
+ * a mailbox somebody actually reads; leave it unset and behaviour is unchanged.
+ */
+const replyTo = process.env.RESEND_REPLY_TO;
 const resend = key ? new Resend(key) : null;
+
+/**
+ * Whether notification email will actually be delivered.
+ *
+ * Without a key, `sendMail` logs to the server console and returns — which is
+ * fine locally and silently useless in production. A provider who misses their
+ * first enquiry concludes the whole thing does not work, and nobody finds out
+ * because nothing errors. The admin dashboard surfaces this so it cannot be
+ * forgotten before recruiting starts.
+ */
+export function emailIsConfigured() {
+  return Boolean(key);
+}
+
+/** The address notifications are sent from, for showing in the admin screen. */
+export function emailFrom() {
+  return from;
+}
 
 /**
  * Sends a notification. Without RESEND_API_KEY it logs instead of failing, so
@@ -14,7 +42,7 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     return { stubbed: true as const };
   }
   try {
-    await resend.emails.send({ from, ...opts });
+    await resend.emails.send({ from, ...(replyTo ? { replyTo } : {}), ...opts });
     return { stubbed: false as const };
   } catch (err) {
     console.error("[email:error]", err);

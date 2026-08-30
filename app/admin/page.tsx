@@ -2,11 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { decideAdditionalInfo, moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
-import { Badge, Button, Card, Empty, SectionHeader, Shell, Stat } from "@/components/ui";
+import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
+import { emailIsConfigured } from "@/lib/email";
 import { rupees } from "@/lib/brand";
 import { waLink, waProviderNudge } from "@/lib/whatsapp";
+import { resolvedSiteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -142,7 +144,8 @@ export default async function AdminPage() {
       provider_contacts: { phone: string }[] | { phone: string } | null;
     } | null;
   }>;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
+  // WhatsApp reminders go to a phone, so the link has to be absolute.
+  const siteUrl = await resolvedSiteUrl();
 
   const all = statsRes.data ?? [];
   const active = all.filter((p) => p.status === "active").length;
@@ -156,6 +159,7 @@ export default async function AdminPage() {
   return (
     <>
       <Nav subtitle="Admin" />
+      <WideShell />
       <Shell>
         <div className="py-9">
           <div className="flex flex-wrap items-start gap-3">
@@ -180,8 +184,26 @@ export default async function AdminPage() {
             that works at this size.
           </p>
 
+          {/* Notification email is the difference between a provider being told
+              about an enquiry and a line appearing in a log nobody reads. When
+              it is not configured nothing errors, so it has to be said out
+              loud, here, where it will be seen before recruiting starts. */}
+          {!emailIsConfigured() && (
+            <div className="mb-6">
+              <Note tone="mustard">
+                <b>Notification email is not switched on.</b> Providers are not
+                being told when an enquiry arrives — it is written to the server
+                log instead. Set <code>RESEND_API_KEY</code> and{" "}
+                <code>RESEND_FROM</code> in Vercel and redeploy before you
+                recruit anybody.
+              </Note>
+            </div>
+          )}
+
           <Card className="p-5 mb-8">
-            <div className="flex flex-wrap gap-8">
+            {/* Seven stats, spread rather than bunched — see the note on the
+                provider dashboard's stat row. */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-y-5 gap-x-6">
               <Stat value={active} label="active providers" />
               <Stat value={queue} label="awaiting review" />
               <Stat value={totalLeads} label="requests sent" />

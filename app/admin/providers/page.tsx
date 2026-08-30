@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import SettleForm from "./settle-form";
 import { setCreditLimit, setProviderStatus } from "../actions";
-import { Badge, Button, Card, Empty, SectionHeader, Shell, inputClass } from "@/components/ui";
+import { Badge, Button, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { rupees } from "@/lib/brand";
@@ -77,6 +77,7 @@ export default async function AdminProviders({
   return (
     <>
       <Nav subtitle="Admin" />
+      <WideShell />
       <Shell>
         <div className="py-9">
           <div className="flex flex-wrap items-start gap-3 mb-1">

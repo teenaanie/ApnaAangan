@@ -4,7 +4,7 @@ import Nav from "@/components/nav";
 import { respondToLead } from "./actions";
 import UpdateComposer from "./update-composer";
 import Availability from "./availability";
-import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, Stat } from "@/components/ui";
+import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getMyProvider, isConfigured } from "@/lib/data";
 import { FREE_LEADS, rupees } from "@/lib/brand";
@@ -78,6 +78,7 @@ export default async function ProviderDashboard({
   return (
     <>
       <Nav subtitle="Provider" />
+      <WideShell />
       <Shell>
         <div className="py-8">
           {sp.welcome && (
@@ -113,7 +114,11 @@ export default async function ProviderDashboard({
 
           {/* ------------------------------------------------------ the money */}
           <Card className="p-5 mb-7">
-            <div className="flex flex-wrap gap-8">
+            {/* A grid rather than a flex row: on a wide dashboard six stats in a
+                flex row bunch up on the left with half the card empty beside
+                them. Columns keep them evenly spaced at any width, and fold to
+                three then two on smaller screens. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-y-5 gap-x-6">
               <Stat value={provider.leads_total} label="requests received" />
               <Stat value={provider.leads_accepted} label="accepted" />
               <Stat value={declined} label="declined" />

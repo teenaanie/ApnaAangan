@@ -231,7 +231,7 @@ Skip this and the build succeeds but the site serves nothing useful.
 ```
 NEXT_PUBLIC_SUPABASE_URL      = https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY = eyJhbGci...
-NEXT_PUBLIC_SITE_URL          = https://your-project.vercel.app
+NEXT_PUBLIC_SITE_URL          = https://apnaaangan.com     # no trailing slash
 ```
 
 `NEXT_PUBLIC_SITE_URL` must be the **production** URL. It's what providers'
@@ -246,8 +246,8 @@ share links are built from — get it wrong and they'll be handing neighbours a
 
 Back to **Authentication → URL Configuration** and add:
 
-- Site URL: `https://your-project.vercel.app`
-- Redirect URLs: `https://your-project.vercel.app/auth/callback`
+- Site URL: `https://apnaaangan.com`
+- Redirect URLs: `https://apnaaangan.com/auth/callback` (keep the old `*.vercel.app` one too)
 
 Keep the localhost entries so local development still works.
 

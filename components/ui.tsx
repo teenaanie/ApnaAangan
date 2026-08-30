@@ -11,7 +11,19 @@ export { Logo, Mark, Wordmark, LOGO_MIN } from "@/components/logo";
 /* ----------------------------------------------------------------- layout -- */
 
 export function Shell({ children }: { children: ReactNode }) {
-  return <div className="max-w-5xl mx-auto px-4">{children}</div>;
+  return <div className="max-w-[var(--shell)] mx-auto px-4">{children}</div>;
+}
+
+/**
+ * Widens the content column for this page — nav, body and footer together.
+ *
+ * Render it once, anywhere in a page that is a dashboard rather than a
+ * document. It sets one custom property, so there is nothing to keep in sync
+ * and no way for the header to end up a different width from the content
+ * under it.
+ */
+export function WideShell() {
+  return <style>{`:root{--shell:80rem}`}</style>;
 }
 
 export function Card({
