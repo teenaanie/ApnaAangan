@@ -112,15 +112,19 @@ export default async function AdminPage() {
   // Additional-info proposals. The live copy stays public while these wait, so
   // this queue is never urgent — but it is where a phone number would try to
   // get onto a public page, so it is not optional either.
+  // Per listing since migration 0023, not per provider: a baker who also
+  // teaches has two different notice periods, and one shared paragraph made
+  // them write "for cakes… for tuition…" beside only one of the two.
   const { data: infoRows } = await supabase
-    .from("providers")
-    .select("id, public_id, display_name, additional_info, additional_info_pending, additional_info_at")
+    .from("listings")
+    .select("id, title, additional_info, additional_info_pending, additional_info_at, providers(public_id, display_name)")
     .not("additional_info_pending", "is", null)
     .order("additional_info_at");
 
   const pendingInfo = (infoRows ?? []) as unknown as Array<{
-    id: string; public_id: string; display_name: string;
+    id: string; title: string;
     additional_info: string | null; additional_info_pending: string | null;
+    providers: { public_id: string; display_name: string } | null;
   }>;
 
   const { data: blockedRows } = await supabase
@@ -555,22 +559,25 @@ export default async function AdminPage() {
           <SectionHeader>Additional info awaiting approval · {pendingInfo.length}</SectionHeader>
           {pendingInfo.length === 0 ? (
             <Empty title="Nothing waiting">
-              Providers describe notice periods, delivery areas and payment here.
-              It is read before it goes public.
+              Notice periods, delivery areas and payment accepted, written per
+              listing. Each one is read before it goes public.
             </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {pendingInfo.map((p) => (
                 <Card key={p.id} className="p-4">
-                  <p className="font-bold text-body m-0">{p.display_name}</p>
-                  <p className="text-caption text-charcoal-faint font-mono mt-0.5">
-                    {p.public_id}
+                  <p className="font-bold text-body m-0">{p.title}</p>
+                  <p className="text-caption text-charcoal-faint mt-0.5">
+                    {p.providers?.display_name}
+                    {p.providers?.public_id ? (
+                      <span className="font-mono"> · {p.providers.public_id}</span>
+                    ) : null}
                   </p>
 
                   <div className="mt-2.5 grid sm:grid-cols-2 gap-2.5">
                     <div className="rounded-xl border border-sandstone-soft bg-cream/70 p-2.5">
                       <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
-                        {p.additional_info ? "On their page now" : "Nothing published yet"}
+                        {p.additional_info ? "On this listing now" : "Nothing published yet"}
                       </p>
                       {p.additional_info && (
                         <p className="text-caption text-charcoal-soft m-0 whitespace-pre-line">

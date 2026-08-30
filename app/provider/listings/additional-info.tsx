@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { setAdditionalInfo, type ActionState } from "../actions";
-import { Button, Card, Note, inputClass } from "@/components/ui";
+import { Button, Note, inputClass } from "@/components/ui";
 
 function Save() {
   const { pending } = useFormStatus();
@@ -17,9 +17,13 @@ function Save() {
 const MAX = 600;
 
 export default function AdditionalInfo({
+  listingId,
   live,
   pending,
 }: {
+  /** Which listing this text belongs to. It is per listing, not per person:
+      someone who bakes and teaches has two different notice periods. */
+  listingId: string;
   live: string | null;
   pending: string | null;
 }) {
@@ -36,8 +40,9 @@ export default function AdditionalInfo({
   const left = MAX - text.length;
 
   return (
-    <Card className="p-5">
+    <div>
       <form action={action}>
+        <input type="hidden" name="listing_id" value={listingId} />
         <label className="block mb-2">
           <span className="block text-body font-bold mb-1">
             Anything else neighbours should know
@@ -96,6 +101,6 @@ export default function AdditionalInfo({
           <p className="text-body text-charcoal-soft leading-relaxed m-0">{live}</p>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

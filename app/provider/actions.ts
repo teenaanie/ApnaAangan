@@ -341,10 +341,15 @@ export async function setAdditionalInfo(
   formData: FormData
 ): Promise<ActionState> {
   const text = String(formData.get("additional_info") || "").trim();
+  const listingId = String(formData.get("listing_id") || "");
+  if (!listingId) return { error: "Which listing is this for?" };
   if (text.length > 600) return { error: "Keep it under 600 characters." };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("set_my_additional_info", { p_text: text });
+  const { data, error } = await supabase.rpc("set_listing_additional_info", {
+    p_listing_id: listingId,
+    p_text: text,
+  });
   if (error) return { error: error.message };
 
   const res = data as { ok: boolean; error?: string; queued?: boolean };

@@ -28,6 +28,8 @@ type Row = {
   category_id: string | null;
   edited_at: string | null;
   keywords: string[] | null;
+  additional_info: string | null;
+  additional_info_pending: string | null;
 };
 
 /**
@@ -67,7 +69,7 @@ export default async function ListingsPage() {
     supabase
       .from("listings")
       .select(
-        "id, title, description, price_from, price_unit, availability, icon, status, is_active, paused_at, category_id, edited_at, keywords"
+        "id, title, description, price_from, price_unit, availability, icon, status, is_active, paused_at, category_id, edited_at, keywords, additional_info, additional_info_pending"
       )
       .eq("provider_id", provider.id)
       .order("created_at", { ascending: false }),
@@ -219,6 +221,17 @@ export default async function ListingsPage() {
                       />
                     </div>
 
+                    <div className="mt-3.5 pt-3.5 border-t border-sandstone-soft">
+                      <p className="text-caption font-bold text-charcoal-soft mb-2">
+                        Additional info
+                      </p>
+                      <AdditionalInfo
+                        listingId={l.id}
+                        live={l.additional_info ?? null}
+                        pending={l.additional_info_pending ?? null}
+                      />
+                    </div>
+
                     <EditListing
                       listing={l}
                       categories={categories}
@@ -266,14 +279,6 @@ export default async function ListingsPage() {
           {/* The lists above use the full width; a form does not — a text field
               1200px wide is harder to fill in, not easier. */}
           <div className="max-w-2xl">
-            <SectionHeader>Additional info</SectionHeader>
-            <div className="mb-9">
-              <AdditionalInfo
-                live={provider.additional_info}
-                pending={provider.additional_info_pending}
-              />
-            </div>
-
             <SectionHeader>Add another</SectionHeader>
             <AddListing categories={categories} />
           </div>

@@ -321,8 +321,8 @@ export async function decideAdditionalInfo(formData: FormData) {
   if (!id) return;
 
   const supabase = await assertAdmin();
-  await supabase.rpc("decide_additional_info", {
-    p_provider_id: id,
+  await supabase.rpc("decide_listing_additional_info", {
+    p_listing_id: id,
     p_approve: approve,
   });
 

@@ -43,6 +43,7 @@ export type Provider = {
 };
 
 export type ListingCard = {
+  additional_info: string | null;
   first_approved_at?: string | null;
   id: string;
   title: string;

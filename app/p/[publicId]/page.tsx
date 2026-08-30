@@ -8,7 +8,6 @@ import { photoBase } from "@/lib/site";
 import {
   getListingsForProvider,
   getProviderByPublicId,
-  getReviewsForProvider,
   getTodayForProvider,
   getApprovedPhotos,
   isConfigured,
@@ -41,9 +40,8 @@ export default async function ProviderPage({
   const provider = await getProviderByPublicId(publicId);
   if (!provider) notFound();
 
-  const [listings, reviews, today] = await Promise.all([
+  const [listings, today] = await Promise.all([
     getListingsForProvider(provider.id),
-    getReviewsForProvider(provider.id),
     getTodayForProvider(provider.id),
   ]);
 
@@ -204,45 +202,30 @@ export default async function ProviderPage({
                       )}
                       {l.availability && <Badge>{l.availability}</Badge>}
                     </div>
+
+                    {/* Notice period, delivery area, payment accepted — per
+                        listing, because someone who bakes and teaches has two
+                        different answers to each. */}
+                    {l.additional_info && (
+                      <p className="text-caption text-charcoal-soft leading-relaxed mt-2.5 pt-2.5 border-t border-sandstone-soft whitespace-pre-line m-0">
+                        {l.additional_info}
+                      </p>
+                    )}
                   </Card>
                 ))}
               </div>
             )}
 
-            {provider.additional_info && (
-              <div className="mt-8">
-                <SectionHeader>Additional info</SectionHeader>
-                <Card className="p-4">
-                  <p className="text-body text-charcoal-soft leading-relaxed m-0 whitespace-pre-line">
-                    {provider.additional_info}
-                  </p>
-                </Card>
-              </div>
-            )}
+            {/* Additional info moved onto each listing (migration 0023):
+                one paragraph per person forced a provider who bakes AND
+                teaches to write "for cakes… for tuition…" beside only one of
+                them. It now sits on the listing it describes. */}
 
-            {reviews.length > 0 && (
-              <div className="mt-8">
-                <SectionHeader>What neighbours say</SectionHeader>
-                <div className="grid gap-0">
-                  {reviews.map((r) => (
-                    <div key={r.id} className="py-3 border-b border-sandstone-soft last:border-0">
-                      <p className="flex items-center gap-2 mb-1 text-caption">
-                        <span className="font-bold">{r.author_name ?? "A neighbour"}</span>
-                        <span className="text-mustard text-caption">
-                          {"\u2605".repeat(r.rating)}
-                          <span className="text-sandstone">{"\u2605".repeat(5 - r.rating)}</span>
-                        </span>
-                      </p>
-                      {r.body && (
-                        <p className="text-body text-charcoal-soft leading-relaxed m-0">
-                          {r.body}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* "What neighbours say" removed 30 August 2026. Nothing in the
+                app lets a resident write a review, so the only thing that could
+                ever appear here was seeded demo data — five-star praise for a
+                provider who has never had a customer. When reviews can actually
+                be written, this comes back. */}
           </div>
 
           {/* ------------------------------------------------------- booking */}

@@ -157,21 +157,23 @@ export default async function SharePage() {
                             </Badge>
                           )}
                         </div>
+                        {/* Additional info belongs to the listing, not the person.
+                            It is shown here inside the listing it describes, so
+                            this preview matches what a neighbour actually sees. */}
+                        {l.additional_info && (
+                          <div className="mt-2.5 pt-2.5 border-t border-sandstone-soft">
+                            <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
+                              Today
+                            </p>
+                            <p className="text-caption text-charcoal-soft leading-relaxed m-0 whitespace-pre-line">
+                              {l.additional_info}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
                 ))}
-
-                {provider.additional_info && (
-                  <Card className="p-4">
-                    <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1.5">
-                      Additional info
-                    </p>
-                    <p className="text-caption text-charcoal-soft leading-relaxed m-0 whitespace-pre-line">
-                      {provider.additional_info}
-                    </p>
-                  </Card>
-                )}
               </div>
             )}
           </div>
