@@ -157,7 +157,10 @@ export default async function ProviderPage({
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
                 {listings.map((l) => (
-                  <Card key={l.id} className="p-4">
+                  /* Anchored so a provider can link to one listing rather than
+                     to the top of their page. scroll-mt clears the sticky nav,
+                     without which the card lands underneath it. */
+                  <Card key={l.id} id={`l-${l.id}`} className="p-4 scroll-mt-24">
                     {/* The photograph does more selling than any description,
                         so it goes above the words rather than beside them. */}
                     {(photos[l.id]?.length ?? 0) > 0 && (

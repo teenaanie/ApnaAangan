@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import AddListing from "./add-listing";
-import EditListing from "./edit-listing";
+import ListingEditors from "./editors";
 import Photos, { type ListingPhoto } from "./photos";
 import { photoBase } from "@/lib/site";
-import AdditionalInfo from "./additional-info";
 import { setListingPaused } from "../actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -99,16 +98,12 @@ export default async function ListingsPage() {
       <WideShell />
       <Shell>
         <div className="py-9">
-          <div className="flex flex-wrap items-start gap-3 mb-1">
-            <h1 className="m-0">Your listings</h1>
-            <div className="flex-1" />
-            <Link
-              href={`/p/${provider.public_id}`}
-              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
-            >
-              View my page →
-            </Link>
-          </div>
+          {/* "View my page" used to sit here as a single link for the whole
+              screen. With more than one listing that is the wrong grain — it
+              answers "how does my page look" when the question a provider is
+              actually asking is "how does THIS look". It now sits on each
+              listing and opens the page with that one selected. */}
+          <h1 className="m-0 mb-1">Your listings</h1>
           <p className="text-charcoal-soft text-body mb-6">
             {liveCount} of {listings.length} visible to neighbours right now.{" "}
             <Link
@@ -206,6 +201,18 @@ export default async function ListingsPage() {
                             {v.why}
                           </p>
                         )}
+                        {/* Only offered when there is something to look at.
+                            A link to a listing a neighbour cannot see leads to
+                            a page that does not show it, which reads as a
+                            broken link rather than as "not approved yet". */}
+                        {v.live && (
+                          <Link
+                            href={`/p/${provider.public_id}?listing=${l.id}#l-${l.id}`}
+                            className="block text-caption font-bold text-charcoal-soft hover:text-terracotta-deep mt-1.5"
+                          >
+                            See it live →
+                          </Link>
+                        )}
                       </div>
                     </div>
 
@@ -221,21 +228,15 @@ export default async function ListingsPage() {
                       />
                     </div>
 
-                    <div className="mt-3.5 pt-3.5 border-t border-sandstone-soft">
-                      <p className="text-caption font-bold text-charcoal-soft mb-2">
-                        Additional info
-                      </p>
-                      <AdditionalInfo
-                        listingId={l.id}
-                        live={l.additional_info ?? null}
-                        pending={l.additional_info_pending ?? null}
-                      />
-                    </div>
-
-                    <EditListing
+                    {/* Additional info and the listing's own details save
+                        separately, so only one of the two is ever open — see
+                        editors.tsx. */}
+                    <ListingEditors
                       listing={l}
                       categories={categories}
                       canArchive={listings.length > 1}
+                      info={l.additional_info ?? null}
+                      infoPending={l.additional_info_pending ?? null}
                     />
 
                     {canToggle && (

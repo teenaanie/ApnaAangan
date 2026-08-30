@@ -29,12 +29,17 @@ export function WideShell() {
 export function Card({
   children,
   className = "",
+  id,
 }: {
   children: ReactNode;
   className?: string;
+  /** Set when the card is a link target, so a provider can send someone
+      straight to one listing rather than to the top of the page. */
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={`bg-surface border border-sandstone-soft rounded-2xl ${className}`}
     >
       {children}

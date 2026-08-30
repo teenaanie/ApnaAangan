@@ -19,7 +19,10 @@ const EMPTY = {
   price_from: "",
   price_unit: "onwards",
   availability: "",
+  additional_info: "",
 };
+
+const INFO_MAX = 600;
 
 /**
  * Controlled inputs, deliberately.
@@ -100,6 +103,27 @@ export default function AddListing({ categories }: { categories: Category[] }) {
             name="availability" value={v.availability} onChange={set("availability")}
             className={inputClass} placeholder="Fri & Sat pickup"
           />
+        </Field>
+
+        {/* Asked for here as well as on the listing card. Someone adding a
+            tuition slot knows their notice period and their payment terms at
+            the moment they are writing the listing — sending them back to a
+            second form afterwards is how the field stays empty. */}
+        <Field label="Anything else neighbours should know" hint="optional">
+          <textarea
+            name="additional_info"
+            rows={3}
+            maxLength={INFO_MAX}
+            value={v.additional_info}
+            onChange={set("additional_info")}
+            className={inputClass}
+            placeholder="Two days' notice for large orders. Delivery within the society only. UPI or cash on collection."
+          />
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+            Notice you need, the area you cover, how you take payment, festival
+            timings. Not the place for a phone number — yours stays private
+            until you accept a request.
+          </span>
         </Field>
 
         {state.error && <p className="text-body text-terracotta-deep mb-3">{state.error}</p>}

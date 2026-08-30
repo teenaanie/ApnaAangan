@@ -124,17 +124,34 @@ export async function addListing(
     .from("providers").select("id").eq("user_id", user.id).maybeSingle();
   if (!provider) return { error: "Set up your provider profile first." };
 
-  const { error } = await supabase.from("listings").insert({
-    provider_id: provider.id,
-    category_id: categoryId,
-    title,
-    description: description || null,
-    price_from: priceFrom,
-    price_unit: priceUnit,
-    availability: availability || null,
-    icon,
-  });
+  const { data: created, error } = await supabase
+    .from("listings")
+    .insert({
+      provider_id: provider.id,
+      category_id: categoryId,
+      title,
+      description: description || null,
+      price_from: priceFrom,
+      price_unit: priceUnit,
+      availability: availability || null,
+      icon,
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
+
+  // The note goes through the same review as everything else, so it is queued
+  // rather than written straight to the live column. Deliberately not fatal:
+  // the listing itself already exists by this point, and losing it because a
+  // note failed would be the worse outcome. The provider can add the note
+  // again from the listing card.
+  const info = String(formData.get("additional_info") || "").trim();
+  if (info && created?.id) {
+    await supabase.rpc("set_listing_additional_info", {
+      p_listing_id: created.id,
+      p_text: info.slice(0, 600),
+    });
+  }
 
   revalidatePath("/provider/listings");
   return { ok: "Listing submitted. It goes live once it's approved." };

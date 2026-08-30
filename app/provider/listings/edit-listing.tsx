@@ -39,13 +39,21 @@ export default function EditListing({
   listing,
   categories,
   canArchive,
+  open,
+  onOpen,
+  onClose,
 }: {
   listing: Listing;
   categories: Category[];
   canArchive: boolean;
+  /** Owned by the card, so this and the additional-info form are never open
+      together — two Save buttons in one card is how the wrong one gets
+      pressed. */
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(updateListing, {});
-  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(listing.title);
   const [desc, setDesc] = useState(listing.description ?? "");
   const [confirmArchive, setConfirmArchive] = useState(false);
@@ -60,7 +68,8 @@ export default function EditListing({
   // back a new object per submission, so re-opening the form later does not
   // re-fire this and slam it shut again.
   useEffect(() => {
-    if (state.ok) setOpen(false);
+    if (state.ok) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   // The card above re-renders with the saved values after revalidation. Re-sync
@@ -79,8 +88,8 @@ export default function EditListing({
   if (!open) {
     return (
       <div className="mt-3 pt-3 border-t border-sandstone-soft flex flex-wrap items-center gap-3">
-        <Button type="button" variant="ghost" onClick={() => setOpen(true)}>
-          Edit
+        <Button type="button" variant="ghost" onClick={onOpen}>
+          Edit this listing
         </Button>
         {state.ok && <span className="text-caption text-sage-deep">{state.ok}</span>}
       </div>
@@ -89,6 +98,11 @@ export default function EditListing({
 
   return (
     <div className="mt-3 pt-3 border-t border-sandstone-soft">
+      {/* Say which form this is. When two forms sat one above the other with
+          no heading between them, they read as one. */}
+      <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint mb-3">
+        Editing this listing
+      </p>
       <form action={action}>
         <input type="hidden" name="listing_id" value={listing.id} />
 
@@ -203,7 +217,7 @@ export default function EditListing({
 
         <div className="flex flex-wrap gap-2">
           <Save />
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
         </div>
