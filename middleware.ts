@@ -27,6 +27,32 @@ export async function middleware(request: NextRequest) {
   // render its setup page instead of throwing a 500 on the very first run.
   if (!supabaseUrl || !supabaseKey) return response;
 
+  const path = request.nextUrl.pathname;
+
+  /* Nobody signed in? Then there is nothing to verify.
+     `auth.getUser()` is a network call to Supabase — it does not read the
+     cookie, it asks the server whether the token in it is still good. Running
+     it on every request meant a resident tapping a listing waited for a round
+     trip to an auth server before the page began rendering, to answer a
+     question about an account they do not have.
+     Residents never sign in, so on the public side there is no cookie at all
+     and this returns immediately. Reported as "all the clicks are very slow"
+     on 31 August 2026. */
+  const hasSession = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+
+  const needsAuth =
+    path.startsWith("/provider") || path.startsWith("/admin") || path === "/rates";
+
+  if (!hasSession) {
+    if (!needsAuth) return response;
+    const redirectTo = request.nextUrl.clone();
+    redirectTo.pathname = "/auth/login";
+    redirectTo.searchParams.set("next", path);
+    return NextResponse.redirect(redirectTo);
+  }
+
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
@@ -40,15 +66,14 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // There is a session cookie, so it is worth the round trip: this both
+  // verifies the token and refreshes it when it is close to expiring, which is
+  // what keeps a provider signed in between visits.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
-  const isPrivate =
-    path.startsWith("/provider") || path.startsWith("/admin") || path === "/rates";
-
-  if (isPrivate && !user) {
+  if (needsAuth && !user) {
     const redirectTo = request.nextUrl.clone();
     redirectTo.pathname = "/auth/login";
     redirectTo.searchParams.set("next", path);
@@ -58,8 +83,11 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+/* Fonts and the data-URL QR images were being matched too. Excluding the
+   whole of _next rather than only _next/static keeps the middleware off every
+   chunk the browser fetches while a page is loading. */
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf)$).*)",
   ],
 };

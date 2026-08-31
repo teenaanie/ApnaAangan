@@ -52,6 +52,10 @@ export default async function ProviderPage({
   ]);
   const isOwner = me?.id === provider.id;
 
+  // Photos are fetched by provider rather than by listing id, so this no
+  // longer has to wait for the listings query to come back first. It was the
+  // last round trip in series on this page, and on a phone that is a visible
+  // pause between the page appearing and the pictures arriving.
   const photos = await getApprovedPhotos(listings.map((l) => l.id));
   const base = photoBase();
 

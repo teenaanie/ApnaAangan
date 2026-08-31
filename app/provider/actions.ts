@@ -205,7 +205,12 @@ export async function postUpdate(
   });
   if (error) return { error: error.message };
 
+  // The composer lives on the listings page now, and the dashboard shows a
+  // read-out of what is live — both need refreshing, or the provider posts an
+  // update and watches the screen not change.
+  revalidatePath("/provider/listings");
   revalidatePath("/provider");
+  revalidatePath("/");
   return { ok: "Posted. It appears once it has been checked." };
 }
 

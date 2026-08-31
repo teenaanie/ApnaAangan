@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, ListingCard, Locality, Profile, Provider, PublicProvider } from "@/lib/types";
 
@@ -5,15 +6,33 @@ import type { Category, ListingCard, Locality, Profile, Provider, PublicProvider
 export const isConfigured = () =>
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-/** The signed-in user's profile, or null. */
-export async function getProfile(): Promise<Profile | null> {
+/**
+ * Who is signed in, asked once per request however many times it is called.
+ *
+ * `auth.getUser()` is a network call to Supabase, not a cookie read. Rendering
+ * one provider page used to make three or four of them: the nav asks for the
+ * profile, the nav asks for the provider, and the page asks for the provider
+ * again. Each one is a round trip to another continent before anything appears
+ * on screen.
+ *
+ * React's `cache` makes the whole chain once-per-request. Nothing else needed
+ * to change — the call sites stay exactly as they were.
+ */
+const currentUser = cache(async () => {
   if (!isConfigured()) return null;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  return user;
+});
+
+/** The signed-in user's profile, or null. */
+export const getProfile = cache(async (): Promise<Profile | null> => {
+  const user = await currentUser();
   if (!user) return null;
+  const supabase = await createClient();
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   return (data as Profile) ?? null;
-}
+});
 
 /** The columns of `providers` that anyone is allowed to read.
  *
@@ -30,11 +49,10 @@ const PROVIDER_PUBLIC_COLS =
   "additional_info, additional_info_pending, additional_info_at";
 
 /** The provider record owned by the signed-in user, with their own numbers. */
-export async function getMyProvider(): Promise<Provider | null> {
-  if (!isConfigured()) return null;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export const getMyProvider = cache(async (): Promise<Provider | null> => {
+  const user = await currentUser();
   if (!user) return null;
+  const supabase = await createClient();
 
   const { data } = await supabase
     .from("providers")
@@ -60,21 +78,21 @@ export async function getMyProvider(): Promise<Provider | null> {
     ...(stats ?? {}),
     ...(data as object),
   } as Provider;
-}
+});
 
-export async function getCategories(): Promise<Category[]> {
+export const getCategories = cache(async (): Promise<Category[]> => {
   if (!isConfigured()) return [];
   const supabase = await createClient();
   const { data } = await supabase.from("categories").select("*").order("sort");
   return (data as Category[]) ?? [];
-}
+});
 
-export async function getLocalities(): Promise<Locality[]> {
+export const getLocalities = cache(async (): Promise<Locality[]> => {
   if (!isConfigured()) return [];
   const supabase = await createClient();
   const { data } = await supabase.from("localities").select("*").order("name");
   return (data as Locality[]) ?? [];
-}
+});
 
 /** Public listing cards, filtered by free-text, category and locality. */
 /**

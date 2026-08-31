@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { respondToLead } from "./actions";
-import UpdateComposer from "./update-composer";
 import Availability from "./availability";
 import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -38,6 +37,21 @@ export default async function ProviderDashboard({
     .from("listings")
     .select("id, title, status, is_active, paused_at")
     .eq("provider_id", provider.id);
+
+  // What is showing right now, across every listing and the page itself. A
+  // read-out, not a form — see the note beside the section below.
+  const { data: updateRows } = await supabase
+    .from("provider_updates")
+    .select("id, headline, detail, status, listings(title)")
+    .eq("provider_id", provider.id)
+    .neq("status", "rejected")
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+
+  const liveUpdates = ((updateRows ?? []) as unknown as Array<{
+    id: string; headline: string; detail: string | null; status: string;
+    listings: { title: string } | null;
+  }>).map((u) => ({ ...u, listing_title: u.listings?.title ?? null }));
 
   const myListings = (listingRows ?? []) as unknown as Array<{
     id: string; title: string; status: string; is_active: boolean; paused_at: string | null;
@@ -253,17 +267,48 @@ export default async function ProviderDashboard({
             </div>
           )}
 
-          {/* -------------------------------------------------------- compose */}
+          {/* -------------------------------------------------------- today */}
+          {/* The composer moved onto the listings themselves.
+              It sat here as one form for the whole person, and with two
+              listings it could not say which one an update was about — a baker
+              who also teaches would post "biryani today" and have it appear
+              above her tuition listing. It is now written on the listing it
+              belongs to, where it is also drawn exactly as a neighbour sees
+              it. What is left here is the answer to "is anything on today",
+              which is the question a dashboard should answer. */}
           <div className="mt-9">
-            <SectionHeader>Post an update</SectionHeader>
-            {/* Only listings a neighbour can actually reach are offered as a
-                target. An update on a paused listing would be a headline on a
-                page nobody can open. */}
-            <UpdateComposer
-              listings={myListings
-                .filter((l) => l.status === "approved" && l.is_active && !l.paused_at)
-                .map((l) => ({ id: l.id, title: l.title }))}
-            />
+            <SectionHeader>What&rsquo;s on today · {liveUpdates.length}</SectionHeader>
+            {liveUpdates.length === 0 ? (
+              <Empty title="Nothing on today">
+                Today&rsquo;s menu, a free slot, a change of timing. Say it on the
+                listing it is about — it shows on your page and on the directory,
+                and clears on its own after two days.{" "}
+                <Link href="/provider/listings" className="font-bold underline">
+                  Go to your listings
+                </Link>
+              </Empty>
+            ) : (
+              <div className="grid gap-3">
+                {liveUpdates.map((u) => (
+                  <Card key={u.id} className="p-4 bg-mustard-tint border-mustard/25">
+                    <p className="text-caption font-bold text-mustard m-0 mb-1">
+                      {u.listing_title ?? "Everything you offer"}
+                      {u.status === "pending" ? " · being checked" : ""}
+                    </p>
+                    <p className="text-body font-bold text-charcoal m-0">{u.headline}</p>
+                    {u.detail && (
+                      <p className="text-caption text-charcoal-soft m-0 mt-0.5">{u.detail}</p>
+                    )}
+                  </Card>
+                ))}
+                <p className="text-caption text-charcoal-faint m-0">
+                  <Link href="/provider/listings" className="font-bold underline">
+                    Change these on your listings
+                  </Link>{" "}
+                  — each one clears on its own after two days.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* --------------------------------------------------------- recent */}

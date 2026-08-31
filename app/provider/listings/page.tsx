@@ -5,6 +5,7 @@ import AddListing from "./add-listing";
 import EditListing from "./edit-listing";
 import Availability from "../availability";
 import Photos, { type ListingPhoto } from "./photos";
+import ListingUpdate, { type LiveUpdateRow } from "./listing-update";
 import { photoBase } from "@/lib/site";
 import { setListingPaused } from "../actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
@@ -66,13 +67,11 @@ export default async function ListingsPage() {
   const base = photoBase();
   const supabase = await createClient();
 
-  // Which society these listings appear in. Shown on the add form rather than
-  // asked again — it belongs to the provider, not to each listing.
-  const { data: soc } = provider.locality_id
-    ? await supabase.from("localities").select("name, area").eq("id", provider.locality_id).maybeSingle()
-    : { data: null };
-  const societyName = (soc as { name: string; area: string | null } | null)?.name ?? null;
-  const [{ data: rows }, categories, allPhotos] = await Promise.all([
+  // Everything this page needs, asked for at once. The society lookup used to
+  // run on its own before the rest, which added a whole round trip to Supabase
+  // to a page that was already waiting on three.
+  const [{ data: rows }, categories, allPhotos, { data: soc }, { data: updateRows }] =
+    await Promise.all([
     supabase
       .from("listings")
       .select(
@@ -82,7 +81,33 @@ export default async function ListingsPage() {
       .order("created_at", { ascending: false }),
     getCategories(),
     getPhotosForProvider(provider.id),
+    provider.locality_id
+      ? supabase.from("localities").select("name, area").eq("id", provider.locality_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    // What is on today, per listing. Rejected ones are excluded; a pending one
+    // is shown to its own provider so they can see it is being checked rather
+    // than assume it failed to save.
+    supabase
+      .from("provider_updates")
+      .select("id, listing_id, headline, detail, valid_until, qty_left, kind, status")
+      .eq("provider_id", provider.id)
+      .neq("status", "rejected")
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }),
   ]);
+
+  // Which society these listings appear in. Shown on the add form rather than
+  // asked again — it belongs to the provider, not to each listing.
+  const societyName = (soc as { name: string; area: string | null } | null)?.name ?? null;
+
+  // Newest first from the query, so the first one seen per key is the live one.
+  const updates = (updateRows ?? []) as unknown as Array<LiveUpdateRow & { listing_id: string | null }>;
+  const updateByListing: Record<string, LiveUpdateRow> = {};
+  let wholePageUpdate: LiveUpdateRow | null = null;
+  for (const u of updates) {
+    if (!u.listing_id) wholePageUpdate ??= u;
+    else updateByListing[u.listing_id] ??= u;
+  }
 
   // Grouped once rather than filtered per card inside the render loop.
   const photosByListing: Record<string, ListingPhoto[]> = {};
@@ -188,6 +213,18 @@ export default async function ListingsPage() {
                     key={l.id}
                     className={`p-4 border-sandstone ${v.live ? "" : "bg-cream/60"}`}
                   >
+                    {/* Today's update, drawn as the neighbour will see it and
+                        edited in place. It used to be one composer on the
+                        dashboard for the whole person, which could not say
+                        which listing it was about. */}
+                    {v.live && (
+                      <ListingUpdate
+                        listingId={l.id}
+                        live={updateByListing[l.id] ?? null}
+                        label="this listing"
+                      />
+                    )}
+
                     <div className="flex items-start gap-3">
                       <span className={`text-icon leading-none ${v.live ? "" : "opacity-50"}`}>
                         {l.icon}
@@ -332,6 +369,18 @@ export default async function ListingsPage() {
               could take their tuition offline without ever seeing it happen. */}
           <div id="availability" className="mb-9 scroll-mt-24">
             <SectionHeader>Everything at once</SectionHeader>
+
+            {/* An announcement about the person rather than about one thing
+                they make — away until Monday, a change of address. It shows
+                above every listing on their page. */}
+            <Card className="p-4 mb-3">
+              <ListingUpdate live={wholePageUpdate} label="all your listings" />
+              <p className="text-caption text-charcoal-faint m-0">
+                This one is about you rather than about a single listing, so it
+                shows above everything on your page.
+              </p>
+            </Card>
+
             <Availability
               status={provider.status}
               liveListings={liveCount}
