@@ -415,3 +415,25 @@ function parseKeywords(raw: string): string[] {
   return [...seen];
 }
 
+
+/* -------------------------------------------------- claiming a listing made
+   for you by an administrator. See migration 0030 for why the phone number is
+   asked for as well as the email address. */
+
+export async function claimListing(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const phone = String(formData.get("phone") || "").trim();
+  if (!phone) return { error: "Give the phone number on the listing." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("claim_my_listing", { p_phone: phone });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string };
+  if (!res?.ok) return { error: res?.error ?? "Could not claim that." };
+
+  revalidatePath("/provider");
+  redirect("/provider?claimed=1");
+}

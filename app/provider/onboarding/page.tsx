@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import OnboardingForm from "./form";
+import ClaimListing from "./claim";
+import { createClient } from "@/lib/supabase/server";
 import { Shell } from "@/components/ui";
 import { getCategories, getLocalities, getMyProvider, getProfile, isConfigured } from "@/lib/data";
 
@@ -16,7 +18,18 @@ export default async function Onboarding() {
   const existing = await getMyProvider();
   if (existing) redirect("/provider");
 
-  const [categories, localities] = await Promise.all([getCategories(), getLocalities()]);
+  const supabase = await createClient();
+  const [categories, localities, { data: claim }] = await Promise.all([
+    getCategories(),
+    getLocalities(),
+    // Is there a listing waiting for this address? Someone whose neighbour or
+    // an administrator listed them should take that over rather than filling
+    // this in again and ending up with two — one of which their customers are
+    // already using.
+    supabase.rpc("my_pending_claim"),
+  ]);
+
+  const pending = claim as { found: boolean; display_name?: string } | null;
 
   return (
     <>
@@ -37,6 +50,10 @@ export default async function Onboarding() {
               What it costs, in full
             </Link>
           </p>
+          {pending?.found && pending.display_name && (
+            <ClaimListing displayName={pending.display_name} />
+          )}
+
           <OnboardingForm categories={categories} localities={localities} />
         </div>
       </Shell>

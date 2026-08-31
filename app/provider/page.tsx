@@ -17,7 +17,7 @@ export const metadata = { title: "Your dashboard" };
 export default async function ProviderDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ welcome?: string; err?: string }>;
+  searchParams: Promise<{ welcome?: string; err?: string; claimed?: string }>;
 }) {
   const sp = await searchParams;
   if (!isConfigured()) redirect("/");
@@ -98,6 +98,17 @@ export default async function ProviderDashboard({
       <WideShell />
       <Shell>
         <div className="py-8">
+          {sp.claimed && (
+            <div className="mb-6">
+              <Note tone="sage">
+                <b>This listing is yours now.</b> Everything already given out
+                keeps working — the same link, the same QR code, the same
+                provider ID. Have a look through it and change anything that is
+                not quite right.
+              </Note>
+            </div>
+          )}
+
           {sp.welcome && (
             <div className="mb-6">
               <Note>

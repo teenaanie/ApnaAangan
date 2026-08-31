@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isGoogleMapsUrl } from "@/lib/maps";
+import { TERMS_VERSION } from "@/lib/terms";
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -367,4 +368,95 @@ export async function decidePhoto(formData: FormData) {
 
   revalidatePath("/admin");
   revalidatePath("/");
+}
+
+/* ------------------------------------------- listing on a provider's behalf */
+
+export type ListForState = { error?: string; ok?: string; publicId?: string };
+
+/**
+ * Create a provider, their number and their first listing, all at once.
+ *
+ * For the person who says "you do it, beta" — the baker who does not use
+ * email, the tailor who will not make an account. The record has no `user_id`,
+ * which is simply what "nobody has an account for this yet" looks like;
+ * everything else about it works, because pages, listings and requests are
+ * keyed on the provider row rather than on a login.
+ *
+ * The insert policy on `providers` is `user_id = auth.uid()`, so this cannot be
+ * done with a plain insert and should not be — it goes through a SECURITY
+ * DEFINER function that checks is_admin() first. See migration 0029.
+ */
+export async function listForProvider(
+  _prev: ListForState,
+  formData: FormData
+): Promise<ListForState> {
+  const supabase = await assertAdmin();
+
+  // Recorded, not assumed. A provider agreement marked "accepted" with nobody
+  // standing behind it is worth less than one that was never asked for — the
+  // function stores which administrator ticked this.
+  if (formData.get("terms_confirmed") !== "on")
+    return {
+      error:
+        "Confirm you have read the provider agreement to them, or sent it to them, before listing on their behalf.",
+    };
+
+  const price = Number(formData.get("price_from") || 0) || null;
+
+  const { data, error } = await supabase.rpc("admin_create_provider", {
+    p_display_name: String(formData.get("display_name") || "").trim(),
+    p_phone: String(formData.get("phone") || "").trim(),
+    p_locality_id: String(formData.get("locality_id") || "") || null,
+    p_about: String(formData.get("about") || "").trim() || null,
+    p_title: String(formData.get("title") || "").trim(),
+    p_description: String(formData.get("description") || "").trim() || null,
+    p_category_id: String(formData.get("category_id") || "") || null,
+    p_price_from: price,
+    p_price_unit: String(formData.get("price_unit") || "onwards").trim(),
+    p_availability: String(formData.get("availability") || "").trim() || null,
+    p_keywords: parseKeywordList(String(formData.get("keywords") || "")),
+    p_terms_version: TERMS_VERSION,
+    p_claim_email: String(formData.get("claim_email") || "").trim() || null,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string; public_id?: string };
+  if (!res?.ok) return { error: res?.error ?? "Could not create that." };
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/admin");
+  revalidatePath("/");
+
+  return {
+    ok:
+      `Listed. Their provider ID is ${res.public_id}, and it is live in the directory now.` +
+      (String(formData.get("claim_email") || "").trim()
+        ? " They can claim it themselves by signing up with that email address."
+        : ""),
+    publicId: res.public_id,
+  };
+}
+
+/** Hand a listing over once its provider makes an account of their own. */
+export async function attachAccount(formData: FormData) {
+  const supabase = await assertAdmin();
+  const id = String(formData.get("provider_id") || "");
+  const email = String(formData.get("email") || "").trim();
+  if (!id || !email) return;
+
+  await supabase.rpc("admin_attach_account", { p_provider_id: id, p_email: email });
+  revalidatePath("/admin/providers");
+}
+
+/** Same rule as the provider's own form: commas, twelve, no duplicates. */
+function parseKeywordList(raw: string): string[] {
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((w) => w.trim().toLowerCase())
+        .filter((w) => w.length >= 2 && w.length <= 30)
+    )
+  ).slice(0, 12);
 }

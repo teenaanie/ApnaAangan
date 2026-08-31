@@ -2,10 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import SettleForm from "./settle-form";
+import ListForProvider from "./list-for";
+import AttachAccount from "./attach-account";
 import { setCreditLimit, setProviderStatus } from "../actions";
 import { Badge, Button, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { getProfile, isConfigured } from "@/lib/data";
+import { getCategories, getLocalities, getProfile, isConfigured } from "@/lib/data";
 import { rupees } from "@/lib/brand";
 import { waLink } from "@/lib/whatsapp";
 
@@ -24,6 +26,8 @@ type Row = {
   leads_total: number;
   leads_accepted: number;
   is_demo?: boolean;
+  /** Null when an administrator listed them and nobody has claimed it yet. */
+  user_id?: string | null;
   localities: { id: string; name: string; area: string | null } | null;
   provider_contacts: { phone: string }[] | { phone: string } | null;
 };
@@ -47,17 +51,19 @@ export default async function AdminProviders({
   // to be readable. Migration 0025 revoked them from every ordinary role and
   // hands them back through `provider_stats`, which returns your own row — or
   // every row, to an administrator. Merged here by id.
-  const [{ data }, { data: statRows }] = await Promise.all([
+  const [{ data }, { data: statRows }, localities, categories] = await Promise.all([
     supabase
       .from("providers")
       .select(
-        "id, public_id, display_name, status, status_note, is_demo, " +
+        "id, public_id, display_name, status, status_note, is_demo, user_id, " +
           "localities(id, name, area), provider_contacts(phone)"
       )
       .order("display_name"),
     supabase
       .from("provider_stats")
       .select("id, balance_paise, credit_limit_paise, free_leads_remaining, leads_total, leads_accepted"),
+    getLocalities(),
+    getCategories(),
   ]);
 
   const stats = new Map(
@@ -115,6 +121,11 @@ export default async function AdminProviders({
             {groups.length === 1 ? "y" : "ies"} · {rupees(owedTotal)} outstanding in
             total.
           </p>
+
+          {/* Folded away behind a link: creating someone else's listing should
+              be a decision, not something you fall into because a form was
+              open on the page. */}
+          <ListForProvider localities={localities} categories={categories} />
 
           {/* ------------------------------------------------------- filters */}
           <div className="flex gap-2 overflow-x-auto no-bar pb-4">
@@ -226,6 +237,18 @@ function ProviderRow({ r }: { r: Row }) {
           </p>
           {r.status_note && (
             <p className="text-caption text-mustard mt-1">{r.status_note}</p>
+          )}
+
+          {/* No account attached — someone listed them rather than them
+              signing up. Everything works, but they cannot manage it
+              themselves until it is handed over. */}
+          {!r.user_id && (
+            <div className="mt-1.5">
+              <Badge tone="mustard">You manage this one</Badge>
+              <div className="mt-1">
+                <AttachAccount providerId={r.id} />
+              </div>
+            </div>
           )}
         </div>
 
