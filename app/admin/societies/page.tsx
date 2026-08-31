@@ -29,12 +29,42 @@ export default async function Societies() {
   if (profile.role !== "admin") redirect("/");
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("localities")
-    .select("id, name, slug, area, city, pincode, map_url, providers(count)")
-    .order("name");
 
-  const rows = (data ?? []) as unknown as Row[];
+  /* Two queries, not one embedded aggregate.
+   *
+   * This was `select(..., providers(count))` — one round trip, and the counts
+   * came back for free. But an embedded aggregate is a PostgREST feature that
+   * a project can have switched off, and when it is, the whole query fails.
+   * The error was being dropped on the floor (`const { data } =` and nothing
+   * else), so a failed query and a genuinely empty directory drew exactly the
+   * same screen: "Listed · 0". Three societies in production, none of them on
+   * the page, and nothing anywhere saying why. Reported 31 August 2026.
+   *
+   * The list of societies now cannot fail because of anything to do with
+   * counting. If the count query breaks, the societies still appear with no
+   * number beside them, which is the right way round — the names are the point
+   * of the page.
+   */
+  const [{ data, error }, { data: provRows }] = await Promise.all([
+    supabase
+      .from("localities")
+      // Only the columns this page draws. Selecting a column that a database
+      // has not been migrated to yet fails the whole query — which is the
+      // failure this change exists to stop happening.
+      .select("id, name, slug, area, city, pincode, map_url")
+      .order("name"),
+    supabase.from("providers").select("locality_id"),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const p of (provRows ?? []) as Array<{ locality_id: string | null }>) {
+    if (p.locality_id) counts.set(p.locality_id, (counts.get(p.locality_id) ?? 0) + 1);
+  }
+
+  const rows = ((data ?? []) as unknown as Array<Row & { id: string }>).map((r) => ({
+    ...r,
+    providers: [{ count: counts.get(r.id) ?? 0 }],
+  })) as unknown as Row[];
 
   return (
     <>
@@ -56,6 +86,20 @@ export default async function Societies() {
             Every society a provider can register under, and that residents can
             filter the directory by.
           </p>
+
+          {/* Say it out loud when the query failed. An empty list that means
+              "nothing is there" and an empty list that means "the question
+              could not be asked" need to look different, or the first hour of
+              looking into it is spent in the wrong place. */}
+          {error && (
+            <div className="mb-6">
+              <Note tone="mustard">
+                <b>The societies could not be loaded.</b> The database said:{" "}
+                <span className="font-mono">{error.message}</span>. Nothing is
+                lost — this is a reading problem, not a missing-data problem.
+              </Note>
+            </div>
+          )}
 
           <SectionHeader>Listed · {rows.length}</SectionHeader>
           {rows.length === 0 ? (

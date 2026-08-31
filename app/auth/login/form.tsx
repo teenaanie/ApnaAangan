@@ -23,14 +23,15 @@ function urlProblem(url: string | undefined): string | null {
 
 /** Supabase errors are terse. Say what to actually do about them. */
 function explain(raw: string): { message: string; hint: string } {
+  // These are read by home bakers and tuition teachers, not by whoever runs
+  // the project. Anything that says "go into Supabase and change a setting" is
+  // an instruction the reader cannot follow and should never have seen — the
+  // same mistake as the operator copy that once reached the public empty
+  // state. Fixes for the operator live in the deployment notes.
   if (/rate limit/i.test(raw))
     return {
-      message: "Supabase's built-in email sender has hit its hourly limit.",
-      hint:
-        "That limit is a handful of messages an hour and applies to sign-up confirmations. " +
-        "Two fixes: turn OFF Authentication → Providers → Email → 'Confirm email' while you're " +
-        "testing, or add your own SMTP under Project Settings → Auth → SMTP. " +
-        "With confirmation off, accounts work instantly and no email is sent at all.",
+      message: "Too many emails have gone out in the last hour.",
+      hint: "Wait a few minutes and try again, or tell us and we will sort it out.",
     };
   if (/invalid login credentials/i.test(raw))
     return {
@@ -44,17 +45,15 @@ function explain(raw: string): { message: string; hint: string } {
     };
   if (/email not confirmed/i.test(raw))
     return {
-      message: "This account still needs its email confirmed.",
-      hint:
-        "Either click the link Supabase emailed you, or turn off " +
-        "Authentication → Providers → Email → 'Confirm email' in Supabase while you're testing.",
+      message: "This account has not been confirmed yet.",
+      hint: "Open the link in the email we sent you. Use the button below to send it again.",
     };
   if (/password/i.test(raw) && /least|short/i.test(raw))
     return { message: raw, hint: "Six characters or more." };
   if (/failed to fetch|networkerror|load failed/i.test(raw))
     return {
-      message: `Couldn't reach Supabase at ${SUPABASE_URL}`,
-      hint: "Check NEXT_PUBLIC_SUPABASE_URL in .env.local, and restart the dev server after changing it.",
+      message: "Could not reach the server.",
+      hint: "Check your connection and try again.",
     };
   return { message: raw, hint: "" };
 }
@@ -72,6 +71,27 @@ export default function LoginForm() {
   const [error, setError] = useState("");
   const [hint, setHint] = useState("");
   const [notice, setNotice] = useState("");
+  /** The address a confirmation was sent to, once one has been. */
+  const [awaiting, setAwaiting] = useState("");
+  const [resent, setResent] = useState(false);
+
+  async function resend() {
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: awaiting || email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/provider/onboarding`,
+      },
+    });
+    if (error) {
+      const x = explain(error.message);
+      setError(x.message);
+      setHint(x.hint);
+    } else {
+      setResent(true);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,17 +125,12 @@ export default function LoginForm() {
           // already registered, so as not to reveal who has an account. Nothing
           // is created, and without this check it looks like silent success.
           setError("There is already an account with this email.");
-          setHint(
-            "Switch to Sign in above. If you never set a password — because this email was used " +
-              "for a magic link earlier — the quickest fix is to delete the user in Supabase " +
-              "(Authentication → Users → find the email → Delete user) and create the account again here."
-          );
+          setHint("Switch to Sign in above, or use Forgot password if you cannot remember it.");
         } else if (!data.session) {
-          setNotice(
-            "Account created, but Supabase wants the email confirmed before you can sign in. " +
-              "Click the link it sent you — or turn OFF Authentication → Providers → Email → " +
-              "'Confirm email' in Supabase while you're testing, then create the account again."
-          );
+          // Confirmation is on. Nothing is wrong — say so plainly, because a
+          // form that goes quiet after "Create account" reads as a failure and
+          // the obvious response is to try again with a different address.
+          setAwaiting(email);
         } else {
           router.push(next);
           router.refresh();
@@ -141,6 +156,45 @@ export default function LoginForm() {
   }
 
   if (notice) return <Note>{notice}</Note>;
+
+  if (awaiting) {
+    return (
+      <>
+        <Note tone="sage">
+          <b>Check your email.</b> We have sent a link to{" "}
+          <b>{awaiting}</b>. Open it and your account is ready — it is how we
+          know the address is really yours, which is what lets a listing set up
+          for you become yours.
+        </Note>
+
+        <p className="text-body text-charcoal-soft mt-4 leading-relaxed">
+          It usually arrives within a minute. If it is not there, look in spam —
+          and check the address above is spelled right.
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button type="button" variant="ghost" onClick={resend} disabled={resent}>
+            {resent ? "Sent again" : "Send it again"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setAwaiting("");
+              setResent(false);
+              setMode("signup");
+            }}
+            className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+          >
+            Use a different address
+          </button>
+        </div>
+
+        {error && (
+          <p className="text-body text-terracotta-deep mt-4">{error}</p>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -230,6 +284,16 @@ export default function LoginForm() {
             <p className="text-body font-bold text-terracotta-deep mb-2">{error}</p>
             {hint && (
               <p className="text-caption text-charcoal-soft leading-relaxed">{hint}</p>
+            )}
+            {/* Someone who never opened the link is stuck until they get
+                another one, and asking them to hunt for a week-old email is
+                not an answer. */}
+            {/not been confirmed/i.test(error) && (
+              <div className="mt-3">
+                <Button type="button" variant="ghost" onClick={resend} disabled={resent}>
+                  {resent ? "Sent — check your email" : "Send the confirmation again"}
+                </Button>
+              </div>
             )}
           </div>
         )}
