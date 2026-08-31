@@ -18,9 +18,9 @@ import { Button, Card, Field, inputClass } from "@/components/ui";
  * Announcement and can be ignored entirely.
  */
 const KINDS = [
-  { k: "announcement", t: "Announcement — today's menu, a change of timing" },
-  { k: "offer", t: "Limited batch — a set quantity that runs out" },
-  { k: "slots", t: "Openings — free slots people can ask for" },
+  { k: "announcement", t: "Just telling people something" },
+  { k: "offer", t: "A batch that runs out — show a count" },
+  { k: "slots", t: "Free slots people can ask for" },
 ] as const;
 
 function Submit() {
@@ -84,7 +84,13 @@ export default function UpdateComposer({
         </Field>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="How long is it good for?">
+          {/* This asked "How long is it good for?", which reads as shelf life
+              — and sitting next to a Type dropdown offering order acceptance
+              and item condition, a provider could reasonably think they were
+              being asked how long the food keeps. It is neither. It is one
+              line printed under the update telling neighbours when to turn up,
+              so it is labelled as what it is and shown as what it says. */}
+          <Field label="When can people come?" hint="shown under your update">
             <select name="valid_until" className={inputClass} defaultValue="Today only">
               <option>Today only</option>
               <option>Orders close 11 am</option>
@@ -95,7 +101,7 @@ export default function UpdateComposer({
             </select>
           </Field>
 
-          <Field label="Type" hint="optional">
+          <Field label="What kind of update?" hint="optional">
             <select
               name="kind"
               className={inputClass}

@@ -1,6 +1,13 @@
 /**
  * What to show where a rating would go.
  *
+ * Since 31 August 2026 the public directory passes no booking count at all:
+ * how much work a lister has taken is private to them, and the columns behind
+ * it are revoked at the database (migration 0025). With no count supplied this
+ * falls through to the age label, which is a fact about the listing rather
+ * than a number about the person. The counting branches are kept because they
+ * are still correct wherever a caller is entitled to the figure.
+ *
  * The old label said "New listing" whenever a listing had no reviews. Since
  * nothing in the app can write a review, that meant every real listing claimed
  * to be new forever — including a two-year-old one. Worse, it invited a
@@ -21,7 +28,7 @@ const DAY = 86_400_000;
 
 export function listingLabel(a: {
   firstApprovedAt: string | null;
-  leadsAccepted: number;
+  leadsAccepted?: number;
   reviewCount?: number;
   avgRating?: number;
 }): ListingLabel | null {
@@ -38,18 +45,20 @@ export function listingLabel(a: {
     ? Math.floor((Date.now() - new Date(a.firstApprovedAt).getTime()) / DAY)
     : null;
 
-  if (a.leadsAccepted >= 25)
+  const accepted = a.leadsAccepted ?? 0;
+
+  if (accepted >= 25)
     return {
       text: "Regularly booked",
       tone: "sage",
-      detail: `${a.leadsAccepted} bookings through Aangan`,
+      detail: `${accepted} bookings through Aangan`,
     };
 
-  if (a.leadsAccepted >= 5)
+  if (accepted >= 5)
     return {
-      text: `${a.leadsAccepted} bookings`,
+      text: `${accepted} bookings`,
       tone: "sage",
-      detail: `${a.leadsAccepted} bookings through Aangan`,
+      detail: `${accepted} bookings through Aangan`,
     };
 
   if (days !== null && days <= 30)
@@ -59,9 +68,9 @@ export function listingLabel(a: {
       detail: "Listed recently — nobody has booked through Aangan yet.",
     };
 
-  if (a.leadsAccepted > 0)
+  if (accepted > 0)
     return {
-      text: `${a.leadsAccepted} booking${a.leadsAccepted === 1 ? "" : "s"}`,
+      text: `${accepted} booking${accepted === 1 ? "" : "s"}`,
       tone: "sage",
     };
 

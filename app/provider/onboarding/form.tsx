@@ -7,6 +7,7 @@ import { createProvider, type ActionState } from "../actions";
 import { Button, Field, Note, SectionHeader, inputClass } from "@/components/ui";
 import { TERMS_PLAIN_SUMMARY, TERMS_VERSION } from "@/lib/terms";
 import type { Category, Locality } from "@/lib/types";
+import SocietyPicker from "./society-picker";
 
 function Submit({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
@@ -59,14 +60,7 @@ export default function OnboardingForm({
         )}
       </Field>
 
-      <Field label="Which society?" hint="optional">
-        <select name="locality_id" className={inputClass} defaultValue="">
-          <option value="">Choose your society</option>
-          {localities.map((l) => (
-            <option key={l.id} value={l.id}>{l.name}{l.area ? ` · ${l.area}` : ""}</option>
-          ))}
-        </select>
-      </Field>
+      <SocietyPicker societies={localities} />
 
       <Field label="A line about you" hint="optional">
         <textarea name="about" rows={2} className={inputClass}

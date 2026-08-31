@@ -43,16 +43,36 @@ export default async function AdminProviders({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("providers")
-    .select(
-      "id, public_id, display_name, status, status_note, balance_paise, credit_limit_paise, " +
-        "free_leads_remaining, leads_total, leads_accepted, is_demo, " +
-        "localities(id, name, area), provider_contacts(phone)"
-    )
-    .order("display_name");
+  // Two queries, because the counting columns no longer live where they used
+  // to be readable. Migration 0025 revoked them from every ordinary role and
+  // hands them back through `provider_stats`, which returns your own row — or
+  // every row, to an administrator. Merged here by id.
+  const [{ data }, { data: statRows }] = await Promise.all([
+    supabase
+      .from("providers")
+      .select(
+        "id, public_id, display_name, status, status_note, is_demo, " +
+          "localities(id, name, area), provider_contacts(phone)"
+      )
+      .order("display_name"),
+    supabase
+      .from("provider_stats")
+      .select("id, balance_paise, credit_limit_paise, free_leads_remaining, leads_total, leads_accepted"),
+  ]);
 
-  const rows = (data ?? []) as unknown as Row[];
+  const stats = new Map(
+    ((statRows ?? []) as unknown as Array<{ id: string } & Record<string, number>>).map((r) => [r.id, r])
+  );
+
+  const rows = ((data ?? []) as unknown as Array<{ id: string }>).map((r) => ({
+    balance_paise: 0,
+    credit_limit_paise: 50000,
+    free_leads_remaining: 0,
+    leads_total: 0,
+    leads_accepted: 0,
+    ...(stats.get(r.id) ?? {}),
+    ...r,
+  })) as unknown as Row[];
 
   // Group by society. "No society set" is a real bucket, not an error — it is
   // where a provider who skipped the optional field lands, and if it fills up

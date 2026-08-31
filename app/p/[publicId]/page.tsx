@@ -143,7 +143,6 @@ export default async function ProviderPage({
 
             <div className="flex gap-8 py-4 border-y border-sandstone-soft mb-6">
               <Stat value={listings.length} label="listings" />
-              <Stat value={provider.leads_accepted} label="bookings accepted" />
               {/* No average rating: nothing in the app lets a resident write a
                   review, so any figure here would be either "—" or, worse,
                   seeded demo stars nobody actually gave. */}

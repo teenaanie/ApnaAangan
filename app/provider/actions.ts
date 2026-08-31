@@ -28,6 +28,10 @@ export async function createProvider(
   if (phone.replace(/\D/g, "").length < 10)
     return { error: "A 10-digit phone number, please." };
   if (!title) return { error: "Give your first listing a title." };
+  // Required since 31 August 2026. It was optional, and the "No society set"
+  // bucket on the admin screen is what optional produced — a provider nobody
+  // filtering to their own society will ever see.
+  if (!localityId) return { error: "Choose your society, so neighbours nearby can find you." };
 
   // Checked on the server too. A checkbox the browser can skip is not consent.
   if (formData.get("accept_terms") !== "on")
@@ -113,6 +117,7 @@ export async function addListing(
   const priceUnit = String(formData.get("price_unit") || "onwards").trim();
   const availability = String(formData.get("availability") || "").trim();
   const icon = String(formData.get("icon") || "✦").trim() || "✦";
+  const keywords = parseKeywords(String(formData.get("keywords") || ""));
 
   if (!title) return { error: "A listing needs a title." };
 
@@ -135,6 +140,7 @@ export async function addListing(
       price_unit: priceUnit,
       availability: availability || null,
       icon,
+      keywords,
     })
     .select("id")
     .single();

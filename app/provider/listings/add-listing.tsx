@@ -19,6 +19,7 @@ const EMPTY = {
   price_from: "",
   price_unit: "onwards",
   availability: "",
+  keywords: "",
   additional_info: "",
 };
 
@@ -33,7 +34,16 @@ const INFO_MAX = 600;
  * leaves the form as it was, and only a success clears it — which also stops
  * the "did that work?" second press that creates a duplicate.
  */
-export default function AddListing({ categories }: { categories: Category[] }) {
+export default function AddListing({
+  categories,
+  societyName,
+}: {
+  categories: Category[];
+  /** Where this listing will appear. Shown rather than asked: a listing
+      belongs to the provider's society, and a provider halfway through the
+      form should not have to remember which one they chose at sign-up. */
+  societyName?: string | null;
+}) {
   const [state, action] = useActionState<ActionState, FormData>(addListing, {});
   const [v, setV] = useState(EMPTY);
 
@@ -48,6 +58,13 @@ export default function AddListing({ categories }: { categories: Category[] }) {
 
   return (
     <Card className="p-5">
+      {societyName && (
+        <p className="text-caption text-charcoal-soft m-0 mb-4 pb-3.5 border-b border-sandstone-soft">
+          This will be listed in <b className="text-charcoal">{societyName}</b>,
+          alongside your other work. To list somewhere else, tell us and we will
+          sort it out.
+        </p>
+      )}
       <form action={action}>
         <Field label="What do you offer?">
           <input
@@ -103,6 +120,24 @@ export default function AddListing({ categories }: { categories: Category[] }) {
             name="availability" value={v.availability} onChange={set("availability")}
             className={inputClass} placeholder="Fri & Sat pickup"
           />
+        </Field>
+
+        {/* The same search-words field the edit form has had all along. It was
+            missing here, which meant every new listing started without the one
+            thing that makes it findable in another language — and nobody goes
+            back to add it later. */}
+        <Field label="Search words" hint="optional — nobody sees these">
+          <input
+            name="keywords" value={v.keywords} onChange={set("keywords")}
+            className={inputClass}
+            placeholder="dabba, tiffin, ghar ka khana, lunch box"
+          />
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+            Words a neighbour might type that are not in your description —
+            other languages, local names, common misspellings. Someone searching
+            &ldquo;silai&rdquo; will not find &ldquo;stitching&rdquo; unless you
+            put it here. Up to 12, separated by commas.
+          </span>
         </Field>
 
         {/* Asked for here as well as on the listing card. Someone adding a

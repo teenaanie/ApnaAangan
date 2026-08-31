@@ -12,7 +12,13 @@ export const BRAND = {
   name: "Apna Aangan",
   /** The short form, for use inside sentences where the full name would drag. */
   shortName: "Aangan",
-  tagline: "Neighbours who make, teach and fix",
+  /** Reads under the name on the posters, and as the site's own description.
+   *  Changed 31 August 2026 to match the printed material — the two drifting
+   *  apart is how someone who scans a QR ends up unsure they arrived at the
+   *  right place. */
+  tagline: "The people who make, teach and fix — close to home.",
+  /** The plain-words descriptor that sits beside the name in a lockup. */
+  descriptor: "Your Neighbourhood Services",
   /** Purpose, from the guideline. Used in metadata and the footer. */
   purpose:
     "Aangan exists to make communities feel connected again — giving visibility to local talent and small businesses so residents can find what they need close to home.",

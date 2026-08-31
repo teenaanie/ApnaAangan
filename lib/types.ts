@@ -20,7 +20,12 @@ export type Profile = {
   role: UserRole;
 };
 
-export type Locality = { id: string; name: string; slug: string; area: string | null; city: string };
+export type Locality = {
+  id: string; name: string; slug: string; area: string | null; city: string;
+  /** Optional, added in migration 0026 — lets sign-up offer the nearest one. */
+  lat?: number | null;
+  lng?: number | null;
+};
 export type Category = { id: string; slug: string; label: string; icon: string; sort: number };
 
 export type Provider = {
@@ -42,6 +47,14 @@ export type Provider = {
   leads_accepted: number;
 };
 
+/** A provider as a resident may see them: everything except the counting.
+ *  See migration 0025 — the numbers are not merely hidden by the page, they
+ *  are revoked at the database. */
+export type PublicProvider = Omit<
+  Provider,
+  "leads_total" | "leads_accepted" | "free_leads_remaining" | "balance_paise" | "credit_limit_paise"
+>;
+
 export type ListingCard = {
   additional_info: string | null;
   first_approved_at?: string | null;
@@ -60,7 +73,6 @@ export type ListingCard = {
   public_id: string;
   display_name: string;
   verified_id: boolean;
-  leads_accepted: number;
   locality_slug: string | null;
   locality_name: string | null;
   avg_rating: number;

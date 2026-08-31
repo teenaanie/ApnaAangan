@@ -68,7 +68,7 @@ export const CUSTOMER_FAQ: FaqSection[] = [
       },
       {
         q: "I got a message saying I have sent too many requests.",
-        a: "There is a limit of five requests an hour from one phone number, which exists to stop the directory being spammed. If you have genuinely hit it while organising a party, wait an hour or tell us and it will be sorted out.",
+        a: "There are checks in place to stop one number firing off request after request, which is what keeps the directory usable for everyone. Ordering a few things in an evening will not trip them. If you have hit one while genuinely organising a party, wait a little or tell us and it will be sorted out.",
       },
     ],
   },
@@ -89,7 +89,7 @@ export const CUSTOMER_FAQ: FaqSection[] = [
       },
       {
         q: "Can I leave a review?",
-        a: "Reviews and ratings appear on provider pages. Genuine ones are not removed because a provider dislikes them. Being fair matters here more than on a big marketplace — this is someone who lives four buildings away.",
+        a: "Not yet. Reviews were described here before they existed, which is the wrong way round — an answer that promises something the site cannot do is worse than no answer. For now, if something goes well or badly, tell us with your reference code and it reaches the right person.",
       },
     ],
   },

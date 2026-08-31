@@ -241,7 +241,24 @@ export async function addSociety(
   const pincode = String(formData.get("pincode") || "").trim();
   const mapUrl = String(formData.get("map_url") || "").trim();
 
+  // Coordinates, so sign-up can offer this society to someone standing in it.
+  // Optional: a society without them still works, it just never wins the
+  // "nearest" comparison. Parsed from the map link when it carries them, since
+  // a link copied from the Maps app usually does and retyping numbers off a
+  // screen is how a decimal point ends up in the wrong place.
+  const fromUrl = mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  const latRaw = String(formData.get("lat") || "").trim() || (fromUrl?.[1] ?? "");
+  const lngRaw = String(formData.get("lng") || "").trim() || (fromUrl?.[2] ?? "");
+  const lat = latRaw ? Number(latRaw) : null;
+  const lng = lngRaw ? Number(lngRaw) : null;
+
   if (name.length < 3) return { error: "What is the society called?" };
+  if (lat !== null && (!Number.isFinite(lat) || Math.abs(lat) > 90))
+    return { error: "That latitude is not a number between -90 and 90." };
+  if (lng !== null && (!Number.isFinite(lng) || Math.abs(lng) > 180))
+    return { error: "That longitude is not a number between -180 and 180." };
+  if ((lat === null) !== (lng === null))
+    return { error: "A location needs both numbers, or neither." };
   if (mapUrl && !isGoogleMapsUrl(mapUrl))
     return { error: "That doesn't look like a Google Maps link. Paste the one from Share in the Maps app." };
   if (pincode && !/^\d{6}$/.test(pincode))
@@ -264,6 +281,8 @@ export async function addSociety(
     city,
     pincode: pincode || null,
     map_url: mapUrl || null,
+    lat,
+    lng,
   });
   if (error) return { error: error.message };
 

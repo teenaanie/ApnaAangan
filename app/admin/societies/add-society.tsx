@@ -14,7 +14,7 @@ function Submit() {
   );
 }
 
-const EMPTY = { name: "", area: "", pincode: "", map_url: "", city: "Pune" };
+const EMPTY = { name: "", area: "", pincode: "", map_url: "", city: "Pune", lat: "", lng: "" };
 
 /**
  * Controlled inputs, deliberately.
@@ -88,6 +88,31 @@ export default function AddSociety() {
             them.
           </span>
         </Field>
+
+        {/* Coordinates let sign-up offer this society to someone standing in
+            it, instead of asking them to find it in a dropdown — which is the
+            step most people skip. Filled in from the map link above when it
+            carries them; otherwise right-click the gate in Google Maps and the
+            first item on the menu is the pair of numbers. */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Latitude" hint="optional">
+            <input
+              name="lat" value={v.lat} onChange={set("lat")}
+              className={inputClass} placeholder="18.4632" inputMode="decimal"
+            />
+          </Field>
+          <Field label="Longitude" hint="optional">
+            <input
+              name="lng" value={v.lng} onChange={set("lng")}
+              className={inputClass} placeholder="73.9143" inputMode="decimal"
+            />
+          </Field>
+        </div>
+        <p className="text-caption text-charcoal-faint -mt-2 mb-4 leading-snug">
+          With these, a provider signing up nearby is offered this society
+          straight away. Right-click the society gate in Google Maps and the
+          first item on the menu is the pair of numbers &mdash; copy it in.
+        </p>
 
         <Field label="City">
           <input

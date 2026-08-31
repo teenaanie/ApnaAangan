@@ -65,6 +65,13 @@ export default async function ListingsPage() {
 
   const base = photoBase();
   const supabase = await createClient();
+
+  // Which society these listings appear in. Shown on the add form rather than
+  // asked again — it belongs to the provider, not to each listing.
+  const { data: soc } = provider.locality_id
+    ? await supabase.from("localities").select("name, area").eq("id", provider.locality_id).maybeSingle()
+    : { data: null };
+  const societyName = (soc as { name: string; area: string | null } | null)?.name ?? null;
   const [{ data: rows }, categories, allPhotos] = await Promise.all([
     supabase
       .from("listings")
@@ -337,7 +344,7 @@ export default async function ListingsPage() {
               1200px wide is harder to fill in, not easier. */}
           <div className="max-w-2xl">
             <SectionHeader>Add another</SectionHeader>
-            <AddListing categories={categories} />
+            <AddListing categories={categories} societyName={societyName} />
           </div>
         </div>
       </Shell>

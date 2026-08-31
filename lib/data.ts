@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Category, ListingCard, Locality, Profile, Provider } from "@/lib/types";
+import type { Category, ListingCard, Locality, Profile, Provider, PublicProvider } from "@/lib/types";
 
 /** True once both Supabase env vars are present. */
 export const isConfigured = () =>
@@ -15,14 +15,51 @@ export async function getProfile(): Promise<Profile | null> {
   return (data as Profile) ?? null;
 }
 
-/** The provider record owned by the signed-in user, or null. */
+/** The columns of `providers` that anyone is allowed to read.
+ *
+ *  Since migration 0025 the counting columns — leads_total, leads_accepted,
+ *  free_leads_remaining, balance_paise, credit_limit_paise — are revoked from
+ *  anon and authenticated, so `select *` now fails outright. That is the point:
+ *  a column-level revoke turns a quiet leak into a loud error in one place.
+ *  Anything that needs the numbers reads `provider_stats`, which hands them
+ *  back to the provider themselves and to an administrator, and to nobody else.
+ */
+const PROVIDER_PUBLIC_COLS =
+  "id, user_id, public_id, display_name, about, locality_id, status, " +
+  "verified_id, created_at, is_demo, status_note, " +
+  "additional_info, additional_info_pending, additional_info_at";
+
+/** The provider record owned by the signed-in user, with their own numbers. */
 export async function getMyProvider(): Promise<Provider | null> {
   if (!isConfigured()) return null;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.from("providers").select("*").eq("user_id", user.id).maybeSingle();
-  return (data as Provider) ?? null;
+
+  const { data } = await supabase
+    .from("providers")
+    .select(PROVIDER_PUBLIC_COLS)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!data) return null;
+
+  // Their own counts, through the view that is allowed to see them. Merged in
+  // so every screen that already reads provider.balance_paise keeps working.
+  const { data: stats } = await supabase
+    .from("provider_stats")
+    .select("leads_total, leads_accepted, free_leads_remaining, balance_paise, credit_limit_paise")
+    .eq("id", (data as unknown as { id: string }).id)
+    .maybeSingle();
+
+  return {
+    leads_total: 0,
+    leads_accepted: 0,
+    free_leads_remaining: 0,
+    balance_paise: 0,
+    credit_limit_paise: 50000,
+    ...(stats ?? {}),
+    ...(data as object),
+  } as Provider;
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -165,12 +202,14 @@ export async function getLiveUpdates(opts: {
 export async function getProviderByPublicId(publicId: string) {
   if (!isConfigured()) return null;
   const supabase = await createClient();
+  // No counts here, on purpose. This is the record a resident's page is built
+  // from, and how many bookings someone has taken is not a resident's business.
   const { data } = await supabase
     .from("providers")
-    .select("*, localities(name, slug, area)")
+    .select(PROVIDER_PUBLIC_COLS + ", localities(name, slug, area, map_url)")
     .eq("public_id", publicId.toUpperCase())
     .maybeSingle();
-  return data as (Provider & {
+  return data as unknown as (PublicProvider & {
     localities: { name: string; slug: string; area: string | null; map_url: string | null } | null;
   }) | null;
 }

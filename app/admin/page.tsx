@@ -39,7 +39,7 @@ export default async function AdminPage() {
       .eq("status", "pending").order("created_at").limit(30),
     supabase.from("leads").select("ref, message, status, charge_paise, created_at, resident_name, resident_phone, is_guest, providers(public_id, display_name, provider_contacts(phone))")
       .order("created_at", { ascending: false }).limit(15),
-    supabase.from("providers").select("status, leads_total, leads_accepted, balance_paise"),
+    supabase.from("providers").select("status"),
   ]);
 
   // Photos waiting to be looked at. A photo is the easiest place to hide a
@@ -178,11 +178,20 @@ export default async function AdminPage() {
   // WhatsApp reminders go to a phone, so the link has to be absolute.
   const siteUrl = await resolvedSiteUrl();
 
-  const all = statsRes.data ?? [];
+  const all = (statsRes.data ?? []) as unknown as Array<{ status: string }>;
   const active = all.filter((p) => p.status === "active").length;
-  const totalLeads = all.reduce((s, p) => s + (p.leads_total ?? 0), 0);
-  const accepted = all.reduce((s, p) => s + (p.leads_accepted ?? 0), 0);
-  const owed = all.reduce((s, p) => s + (p.balance_paise ?? 0), 0);
+
+  // The money and the counts come from provider_stats now — an administrator
+  // sees every row there, and nobody else sees any but their own. See 0025.
+  const { data: numberRows } = await supabase
+    .from("provider_stats")
+    .select("leads_total, leads_accepted, balance_paise");
+  const numbers = (numberRows ?? []) as unknown as Array<{
+    leads_total: number; leads_accepted: number; balance_paise: number;
+  }>;
+  const totalLeads = numbers.reduce((s, p) => s + (p.leads_total ?? 0), 0);
+  const accepted = numbers.reduce((s, p) => s + (p.leads_accepted ?? 0), 0);
+  const owed = numbers.reduce((s, p) => s + (p.balance_paise ?? 0), 0);
 
   const queue =
     pendingProviders.length + pendingListings.length + pendingUpdates.length +

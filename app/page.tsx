@@ -206,12 +206,10 @@ function Chip({
 }
 
 function ListingTile({ l }: { l: ListingCard }) {
-  const label = listingLabel({
-    firstApprovedAt: l.first_approved_at ?? null,
-    leadsAccepted: l.leads_accepted ?? 0,
-    reviewCount: l.review_count,
-    avgRating: Number(l.avg_rating),
-  });
+  // No booking count. How much work a lister has taken is theirs to know —
+  // see migration 0025. What is left is whether the listing is new, which is
+  // a fact about the listing rather than a number about the person.
+  const label = listingLabel({ firstApprovedAt: l.first_approved_at ?? null });
 
   return (
     <Link href={`/p/${l.public_id}?listing=${l.id}`}>
