@@ -191,7 +191,7 @@ export default async function ListingsPage() {
           ) : (
             /* More air between cards than between anything inside one: the
                gap does as much of the separating as the border does. */
-            <div className="grid gap-5 mb-9">
+            <div className="grid gap-7 mb-9">
               {listings.map((l) => {
                 const v = visibility(l, provider.status);
                 const paused = Boolean(l.paused_at);
@@ -211,16 +211,18 @@ export default async function ListingsPage() {
                      outline is always the strongest line on the card. */
                   <Card
                     key={l.id}
-                    className={`p-4 border-sandstone ${v.live ? "" : "bg-cream/60"}`}
+                    className={`p-4 border-[1.5px] border-sandstone ${
+                      v.live ? "" : "bg-cream/60"
+                    }`}
                   >
                     {/* Today's update, drawn as the neighbour will see it and
                         edited in place. It used to be one composer on the
                         dashboard for the whole person, which could not say
                         which listing it was about. */}
-                    {v.live && (
+                    {v.live && updateByListing[l.id] && (
                       <ListingUpdate
                         listingId={l.id}
-                        live={updateByListing[l.id] ?? null}
+                        live={updateByListing[l.id]}
                         label="this listing"
                       />
                     )}
@@ -230,7 +232,11 @@ export default async function ListingsPage() {
                         {l.icon}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-body font-bold m-0 text-charcoal">
+                        {/* The card's real heading. At body size it lost the
+                            top of the card to whatever sat above it, and with
+                            several listings there was nothing to tell the eye
+                            where one ended and the next began. */}
+                        <h3 className="text-subheading font-bold m-0 text-charcoal leading-tight">
                           {l.title}
                         </h3>
                         {l.description && (
@@ -314,6 +320,15 @@ export default async function ListingsPage() {
                           {l.additional_info ?? l.additional_info_pending}
                         </p>
                       </div>
+                    )}
+
+                    {v.live && !updateByListing[l.id] && (
+                      <ListingUpdate
+                        listingId={l.id}
+                        live={null}
+                        label="this listing"
+                        placement="inline"
+                      />
                     )}
 
                     <EditListing

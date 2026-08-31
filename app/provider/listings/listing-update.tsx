@@ -49,11 +49,23 @@ export default function ListingUpdate({
   listingId,
   live,
   label = "this listing",
+  placement = "top",
 }: {
   /** Undefined means the update is about everything the provider offers. */
   listingId?: string;
   live: LiveUpdateRow | null;
   label?: string;
+  /**
+   * "top" bleeds to the card's edges as a banner; "inline" sits in the flow
+   * with the other actions.
+   *
+   * A live update earns the top of the card — it is the thing a neighbour
+   * sees first, and showing it there means the provider is looking at the
+   * real thing. An empty prompt does not: with two listings, every card
+   * opened with the same terracotta line, which took the position the title
+   * should hold and left the two cards looking identical down the page.
+   */
+  placement?: "top" | "inline";
 }) {
   const [state, action] = useActionState<ActionState, FormData>(postUpdate, {});
   const [open, setOpen] = useState(false);
@@ -68,7 +80,13 @@ export default function ListingUpdate({
   if (!open) {
     if (live) {
       return (
-        <div className="-m-4 mb-4 p-3.5 rounded-t-2xl bg-mustard-tint border-b border-mustard/25">
+        <div
+          className={
+            placement === "top"
+              ? "-m-4 mb-4 p-3.5 rounded-t-2xl bg-mustard-tint border-b border-mustard/25"
+              : "mt-3.5 p-3.5 rounded-xl bg-mustard-tint border border-mustard/25"
+          }
+        >
           <p className="text-caption font-bold text-mustard m-0 mb-1 flex items-center gap-1.5">
             <Clock size={13} />
             Today
@@ -96,7 +114,7 @@ export default function ListingUpdate({
     }
 
     return (
-      <div className="-m-4 mb-4 px-3.5 py-2.5 rounded-t-2xl border-b border-sandstone-soft flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -117,7 +135,13 @@ export default function ListingUpdate({
 
   /* -------------------------------------------------------------- writing */
   return (
-    <div className="-m-4 mb-4 p-4 rounded-t-2xl bg-mustard-tint border-b border-mustard/25">
+    <div
+      className={
+        placement === "top"
+          ? "-m-4 mb-4 p-4 rounded-t-2xl bg-mustard-tint border-b border-mustard/25"
+          : "mt-3.5 p-4 rounded-xl bg-mustard-tint border border-mustard/25"
+      }
+    >
       <form action={action}>
         {listingId && <input type="hidden" name="listing_id" value={listingId} />}
 
