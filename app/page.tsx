@@ -57,9 +57,14 @@ export default async function Home({
               arriving from a QR code on a notice board had to look at the
               header to work out where they were. The name is the heading now,
               and the tagline sits under it doing the explaining. */}
-          <h1 className="title max-w-[22ch] mb-2">
-            {BRAND.name} <span className="whitespace-nowrap">— {BRAND.descriptor}</span>
-          </h1>
+          {/* Two lines, no dash between them.
+              The dash was doing a job the line break already does, and at this
+              size it landed at the start of the second line where it read as a
+              stray mark rather than as punctuation. The descriptor is set a
+              step down from the name so the eye gets an order to read them in:
+              who this is, then what it is. */}
+          <h1 className="title max-w-[22ch] mb-1">{BRAND.name}</h1>
+          <p className="display max-w-[22ch] mb-2.5">{BRAND.descriptor}</p>
           <p className="text-subheading text-charcoal max-w-[34ch] mb-3">
             {BRAND.tagline}
           </p>
