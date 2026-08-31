@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { emailIsConfigured } from "@/lib/email";
 import { rupees } from "@/lib/brand";
-import { waLink, waProviderNudge } from "@/lib/whatsapp";
+import { waLink, waProviderNudge, waProviderFollowUp, waResidentFollowUp } from "@/lib/whatsapp";
 import { photoBase, resolvedSiteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -90,19 +90,29 @@ export default async function AdminPage() {
   // Unanswered requests, oldest first. This is a worklist, not a log — the one
   // that has been sitting longest is the one costing a resident their evening,
   // so it goes at the top rather than scrolling off the bottom.
+  //
+  // Declined ones are here too. A decline is a legitimate answer — it is free
+  // and always will be — but it still ends with a resident who has nothing.
+  // Until now it vanished from this page entirely, so the one outcome nobody
+  // could see was the one most worth seeing: a provider declining everything
+  // has a problem worth asking about, and a resident whose first request was
+  // turned down needs to hear from somebody before deciding Aangan is empty.
   const { data: waitingRows } = await supabase
     .from("leads")
     .select(
-      "id, ref, message, created_at, resident_name, requested_time, quoted_fee_paise, " +
+      "id, ref, message, status, created_at, responded_at, resident_name, resident_phone, " +
+        "requested_time, quoted_fee_paise, " +
         "providers(public_id, display_name, status, provider_contacts(phone))"
     )
-    .eq("status", "new")
+    .in("status", ["new", "declined"])
     .order("created_at", { ascending: true })
     .limit(50);
 
   const waiting = (waitingRows ?? []) as unknown as Array<{
-    id: string; ref: string; message: string; created_at: string;
-    resident_name: string; requested_time: string | null; quoted_fee_paise: number | null;
+    id: string; ref: string; message: string; status: string; created_at: string;
+    responded_at: string | null;
+    resident_name: string; resident_phone: string | null;
+    requested_time: string | null; quoted_fee_paise: number | null;
     providers: {
       public_id: string; display_name: string; status: string;
       provider_contacts: { phone: string }[] | { phone: string } | null;
@@ -237,24 +247,25 @@ export default async function AdminPage() {
               <Stat value={totalLeads} label="requests sent" />
               <Stat value={accepted} label="accepted" />
               <Stat value={rupees(owed)} label="accrued, uncollected" />
-              <Stat value={waiting.length} label="waiting on a provider" />
+              <Stat value={waiting.length} label="requests that went nowhere" />
               <Stat value={blocked.length} label="blocked, needs a decision" />
             </div>
           </Card>
 
           {/* ------------------------------------------------ nudge worklist */}
-          <SectionHeader>Waiting on a provider · {waiting.length}</SectionHeader>
+          <SectionHeader>Requests that went nowhere · {waiting.length}</SectionHeader>
           {waiting.length === 0 ? (
             <Empty title="Nothing outstanding">
-              Every request has been accepted or declined. This is what a healthy
-              week looks like.
+              Every request has been accepted. This is what a healthy week looks
+              like.
             </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {waiting.map((w) => {
-                const hours = hoursSince(w.created_at);
+                const declined = w.status === "declined";
+                const hours = hoursSince(declined ? w.responded_at ?? w.created_at : w.created_at);
                 const phone = providerPhone(w.providers);
-                const stale = hours >= 12;
+                const stale = !declined && hours >= 12;
                 return (
                   <Card
                     key={w.id}
@@ -267,7 +278,9 @@ export default async function AdminPage() {
                         <p className="font-bold text-body m-0">
                           {w.providers?.display_name ?? "Unknown provider"}
                         </p>
-                        <Badge tone={stale ? "mustard" : "neutral"}>{waitedLabel(hours)}</Badge>
+                        <Badge tone={declined ? "neutral" : stale ? "mustard" : "neutral"}>
+                          {declined ? `Declined ${waitedLabel(hours)}` : waitedLabel(hours)}
+                        </Badge>
                         {w.providers?.status !== "active" && (
                           <Badge tone="mustard">provider is {w.providers?.status}</Badge>
                         )}
@@ -286,43 +299,87 @@ export default async function AdminPage() {
                       )}
                     </div>
 
-                    {phone ? (
-                      <div className="flex flex-wrap gap-2 shrink-0">
+                    {/* Both sides of the request are reachable from here.
+                        Only from here: a provider still never sees a resident's
+                        number until they accept, which the database enforces.
+                        An administrator can, and a request that ended in a
+                        decline or in silence is exactly when someone should
+                        say something — otherwise the resident is left to
+                        conclude the whole directory is dead. */}
+                    <div className="flex flex-col gap-2 shrink-0 min-w-[190px]">
+                      {phone ? (
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href={waLink(
+                              phone,
+                              declined
+                                ? waProviderFollowUp({
+                                    providerName: w.providers?.display_name ?? "there",
+                                    ref: w.ref,
+                                    residentName: w.resident_name,
+                                    message: w.message,
+                                    declined: true,
+                                    url: `${siteUrl}/provider#requests`,
+                                  })
+                                : waProviderNudge({
+                                    providerName: w.providers?.display_name ?? "there",
+                                    ref: w.ref,
+                                    residentName: w.resident_name,
+                                    message: w.message,
+                                    url: `${siteUrl}/provider#requests`,
+                                  })
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-body font-bold bg-sage text-white hover:bg-sage-deep transition"
+                          >
+                            {declined ? "Ask the lister why" : "Remind the lister"}
+                          </a>
+                          <a
+                            href={`tel:${phone}`}
+                            className="inline-flex items-center rounded-full px-3.5 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
+                          >
+                            Call
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-caption text-charcoal-faint m-0">
+                          No number stored for the lister.
+                        </p>
+                      )}
+
+                      {w.resident_phone ? (
                         <a
                           href={waLink(
-                            phone,
-                            waProviderNudge({
-                              providerName: w.providers?.display_name ?? "there",
-                              ref: w.ref,
+                            w.resident_phone,
+                            waResidentFollowUp({
                               residentName: w.resident_name,
+                              ref: w.ref,
                               message: w.message,
-                              url: `${siteUrl}/provider#requests`,
+                              declined,
+                              url: siteUrl,
                             })
                           )}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-body font-bold bg-sage text-white hover:bg-sage-deep transition"
+                          className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
                         >
-                          Remind on WhatsApp
+                          Message {w.resident_name.split(" ")[0]}
                         </a>
-                        <a
-                          href={`tel:${phone}`}
-                          className="inline-flex items-center rounded-full px-3.5 py-2 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
-                        >
-                          Call
-                        </a>
-                      </div>
-                    ) : (
-                      <p className="text-caption text-charcoal-faint max-w-[180px]">
-                        No number stored, so there is no way to reach them from here.
-                      </p>
-                    )}
+                      ) : (
+                        <p className="text-caption text-charcoal-faint m-0">
+                          No number for the resident.
+                        </p>
+                      )}
+                    </div>
                   </Card>
                 );
               })}
               <p className="text-caption text-charcoal-faint">
-                Highlighted after 12 hours. The message opens in WhatsApp already
-                written — you press send.
+                Unanswered requests are highlighted after 12 hours; declined
+                ones are here so a resident is not left in silence. Every
+                message opens in WhatsApp already written — you read it and
+                press send, so nothing goes out automatically.
               </p>
             </div>
           )}
@@ -519,18 +576,27 @@ export default async function AdminPage() {
             </div>
           )}
 
-          <SectionHeader>Updates awaiting screening · {pendingUpdates.length}</SectionHeader>
-          {pendingUpdates.length === 0 ? (
-            <Empty title="No updates waiting">
-              Today&rsquo;s menus and offers are screened here before they show
-              on the directory.
+          {/* One queue for everything a provider writes.
+              The notes had a section of their own, which meant two headings,
+              two empty states and two places to check for what is the same
+              job: reading a sentence before it goes public. They are the same
+              decision, so they are the same list. */}
+          <SectionHeader>
+            Words awaiting screening · {pendingUpdates.length + pendingInfo.length}
+          </SectionHeader>
+          {pendingUpdates.length + pendingInfo.length === 0 ? (
+            <Empty title="Nothing waiting">
+              Today&rsquo;s menus and offers, and the notes providers write on a
+              listing — notice periods, delivery areas, how they take payment.
+              Each one is read before it goes public.
             </Empty>
           ) : (
             <div className="grid gap-3 mb-9">
               {pendingUpdates.map((u) => (
                 <Card key={u.id} className="p-4 flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-body m-0">{u.headline}</p>
+                    <Badge tone="mustard">Today&rsquo;s update</Badge>
+                    <p className="font-bold text-body m-0 mt-1.5">{u.headline}</p>
                     <p className="text-caption text-charcoal-faint mt-0.5">
                       {u.providers?.display_name} · {u.kind}
                     </p>
@@ -552,21 +618,11 @@ export default async function AdminPage() {
                   </div>
                 </Card>
               ))}
-            </div>
-          )}
 
-          {/* ------------------------------------------- additional info */}
-          <SectionHeader>Additional info awaiting approval · {pendingInfo.length}</SectionHeader>
-          {pendingInfo.length === 0 ? (
-            <Empty title="Nothing waiting">
-              Notice periods, delivery areas and payment accepted, written per
-              listing. Each one is read before it goes public.
-            </Empty>
-          ) : (
-            <div className="grid gap-3 mb-9">
               {pendingInfo.map((p) => (
                 <Card key={p.id} className="p-4">
-                  <p className="font-bold text-body m-0">{p.title}</p>
+                  <Badge>Note on a listing</Badge>
+                  <p className="font-bold text-body m-0 mt-1.5">{p.title}</p>
                   <p className="text-caption text-charcoal-faint mt-0.5">
                     {p.providers?.display_name}
                     {p.providers?.public_id ? (

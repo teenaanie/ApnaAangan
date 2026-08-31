@@ -17,7 +17,13 @@ type Listing = {
   status: string;
   category_id?: string | null;
   keywords?: string[] | null;
+  /** Approved note shown to neighbours. */
+  additional_info?: string | null;
+  /** Proposed note, still being checked. */
+  additional_info_pending?: string | null;
 };
+
+const NOTE_MAX = 600;
 
 function Save() {
   const { pending } = useFormStatus();
@@ -39,24 +45,28 @@ export default function EditListing({
   listing,
   categories,
   canArchive,
-  open,
-  onOpen,
-  onClose,
 }: {
   listing: Listing;
   categories: Category[];
   canArchive: boolean;
-  /** Owned by the card, so this and the additional-info form are never open
-      together — two Save buttons in one card is how the wrong one gets
-      pressed. */
-  open: boolean;
-  onOpen: () => void;
-  onClose: () => void;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(updateListing, {});
+  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(listing.title);
   const [desc, setDesc] = useState(listing.description ?? "");
+  const [note, setNote] = useState(
+    listing.additional_info_pending ?? listing.additional_info ?? ""
+  );
   const [confirmArchive, setConfirmArchive] = useState(false);
+
+  const onOpen = () => setOpen(true);
+  const onClose = () => setOpen(false);
+
+  // Re-sync the note from the server after a save, the same way the title and
+  // description are re-synced below.
+  useEffect(() => {
+    setNote(listing.additional_info_pending ?? listing.additional_info ?? "");
+  }, [listing.additional_info, listing.additional_info_pending]);
 
   // Close the form once the save has actually succeeded.
   //
@@ -198,6 +208,37 @@ export default function EditListing({
             placeholder="Weekends, 2 days' notice"
           />
         </Field>
+
+        {/* The note is part of the listing, so it is part of editing the
+            listing. It had a button and a Save of its own for a day, which
+            made a card of four buttons where one would do. */}
+        <Field label="Anything else neighbours should know" hint="optional">
+          <textarea
+            name="additional_info"
+            rows={3}
+            maxLength={NOTE_MAX}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className={inputClass}
+            placeholder="Two days' notice for large orders. Delivery within the society only. UPI or cash on collection."
+          />
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+            Notice you need, the area you cover, how you take payment, festival
+            timings. Not the place for a phone number — yours stays private
+            until you accept a request. {NOTE_MAX - note.length} characters left.
+          </span>
+        </Field>
+
+        {listing.additional_info_pending && (
+          <div className="mb-4">
+            <Note tone="mustard">
+              <b>Your note is waiting to be checked.</b>{" "}
+              {listing.additional_info
+                ? "The one on your page now stays up until then."
+                : "Nothing shows on your page yet."}
+            </Note>
+          </div>
+        )}
 
         {willRequeue && (
           <div className="mb-4">

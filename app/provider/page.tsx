@@ -210,7 +210,10 @@ export default async function ProviderDashboard({
           {/* -------------------------------------------------- availability */}
           <div className="mb-7">
             <SectionHeader>Your listing</SectionHeader>
+            {/* Read-out only. The controls live where the listings are — see
+                the `summary` comment in availability.tsx. */}
             <Availability
+              summary
               status={provider.status}
               liveListings={liveListings}
               totalListings={myListings.length}

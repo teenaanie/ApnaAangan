@@ -28,11 +28,23 @@ export default function Availability({
   liveListings,
   totalListings,
   pausedListings,
+  summary = false,
 }: {
   status: string;
   liveListings: number;
   totalListings: number;
   pausedListings: number;
+  /**
+   * On the dashboard this is a read-out, not a control.
+   *
+   * "Pause my listing" used to sit here and hide everything on one tap, from a
+   * screen that does not show the provider a single one of their listings.
+   * Someone with two listings who wanted to stop taking cake orders could take
+   * their tuition offline without ever seeing it happen. The button now leads
+   * to the listings page, where they can see what they are switching off and
+   * choose between one of them and all of them.
+   */
+  summary?: boolean;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(setAvailability, {});
   const [showClose, setShowClose] = useState(false);
@@ -64,6 +76,36 @@ export default function Availability({
     );
   }
 
+  const statusLine = paused
+    ? `All ${totalListings} of your listings are hidden and nobody can send you a request. Nothing is being charged. Resume whenever you're ready.`
+    : `${liveListings} of ${totalListings} listing${totalListings === 1 ? "" : "s"} visible to neighbours right now.` +
+      (pausedListings > 0
+        ? ` You have paused ${pausedListings} yourself.`
+        : " Going away, or booked solid? Pause rather than leave requests unanswered.");
+
+  /* ------------------------------------------------- dashboard: read-out */
+  if (summary) {
+    return (
+      <Card className="p-5">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-body m-0 mb-1">
+              {paused ? "You are paused" : "You are taking requests"}
+            </p>
+            <p className="text-body text-charcoal-soft leading-snug m-0">{statusLine}</p>
+          </div>
+          <Link
+            href="/provider/listings#availability"
+            className="shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-body font-bold border border-sandstone bg-surface hover:border-terracotta hover:text-terracotta-deep transition"
+          >
+            {paused ? "Resume or edit" : "Pause or edit"}
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
+  /* ------------------------------------ listings page: the actual controls */
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-start gap-4">
@@ -71,23 +113,11 @@ export default function Availability({
           <p className="font-bold text-body m-0 mb-1">
             {paused ? "You are paused" : "You are taking requests"}
           </p>
-          <p className="text-body text-charcoal-soft leading-snug m-0">
-            {paused
-              ? `All ${totalListings} of your listings are hidden and nobody can send you a request. Nothing is being charged. Resume whenever you're ready.`
-              : `${liveListings} of ${totalListings} listing${totalListings === 1 ? "" : "s"} visible to neighbours right now.` +
-                (pausedListings > 0
-                  ? ` You have paused ${pausedListings} yourself.`
-                  : " Going away, or booked solid? Pause rather than leave requests unanswered.")}
-          </p>
+          <p className="text-body text-charcoal-soft leading-snug m-0">{statusLine}</p>
           <p className="text-caption text-charcoal-faint mt-1.5 m-0">
             {paused
               ? "Resuming brings back everything except listings you paused individually."
-              : "Need to stop just one thing? "}
-            {!paused && (
-              <Link href="/provider/listings" className="underline font-bold text-terracotta-deep">
-                Pause a single listing
-              </Link>
-            )}
+              : "To stop just one thing, use “Pause this one” on that listing above."}
           </p>
         </div>
 
@@ -101,7 +131,7 @@ export default function Availability({
             />
           )}
           <Submit
-            label={paused ? "Resume — start taking requests" : "Pause my listing"}
+            label={paused ? "Resume — start taking requests" : "Pause everything"}
             variant={paused ? "sage" : "ghost"}
           />
         </form>

@@ -305,14 +305,33 @@ export async function updateListing(
   const res = data as { ok: boolean; error?: string; requeued?: boolean };
   if (!res?.ok) return { error: res?.error ?? "Could not save that." };
 
+  // The note lives in the same form as the rest of the listing.
+  //
+  // It used to have a form and a Save of its own, which put two Save buttons on
+  // one card — an extra thing to notice, and an obvious way to press the wrong
+  // one. It still goes through its own moderated column underneath, because it
+  // is free text; the provider does not need to know that. The RPC treats "the
+  // same as what is published" as no change, so saving the rest of the listing
+  // without touching the note queues nothing.
+  let noteQueued = false;
+  if (formData.has("additional_info")) {
+    const note = String(formData.get("additional_info") || "").trim();
+    const { data: infoRes } = await supabase.rpc("set_listing_additional_info", {
+      p_listing_id: id,
+      p_text: note.slice(0, 600),
+    });
+    noteQueued = (infoRes as { queued?: boolean } | null)?.queued === true;
+  }
+
   revalidatePath("/provider/listings");
   revalidatePath("/");
 
-  return {
-    ok: res.requeued
-      ? "Saved. Because the wording changed, it goes back for a quick check before it reappears — usually within a day."
-      : "Saved, and live now.",
-  };
+  if (res.requeued || noteQueued) {
+    return {
+      ok: "Saved. The wording goes back for a quick check before it reappears — usually within a day. Everything else is live now.",
+    };
+  }
+  return { ok: "Saved, and live now." };
 }
 
 /** Remove a listing from the menu without deleting the history behind it. */
@@ -344,39 +363,3 @@ function parseKeywords(raw: string): string[] {
   return [...seen];
 }
 
-/**
- * Propose the "Additional info" text shown on your public page.
- *
- * It does not go live on save. This is the field where a phone number would be
- * smuggled past the lead fee, so a moderator reads it first — but whatever is
- * already published keeps showing meanwhile, so adding useful detail never
- * costs a provider their visibility.
- */
-export async function setAdditionalInfo(
-  _prev: ActionState,
-  formData: FormData
-): Promise<ActionState> {
-  const text = String(formData.get("additional_info") || "").trim();
-  const listingId = String(formData.get("listing_id") || "");
-  if (!listingId) return { error: "Which listing is this for?" };
-  if (text.length > 600) return { error: "Keep it under 600 characters." };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("set_listing_additional_info", {
-    p_listing_id: listingId,
-    p_text: text,
-  });
-  if (error) return { error: error.message };
-
-  const res = data as { ok: boolean; error?: string; queued?: boolean };
-  if (!res?.ok) return { error: res?.error ?? "Could not save that." };
-
-  revalidatePath("/provider/listings");
-  revalidatePath("/provider");
-
-  return {
-    ok: res.queued
-      ? "Saved. It is read before it appears — usually within a day. What's on your page now stays up until then."
-      : "That matches what's already on your page, so there's nothing to review.",
-  };
-}

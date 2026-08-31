@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Nav from "@/components/nav";
 import AddListing from "./add-listing";
-import ListingEditors from "./editors";
+import EditListing from "./edit-listing";
+import Availability from "../availability";
 import Photos, { type ListingPhoto } from "./photos";
 import { photoBase } from "@/lib/site";
 import { setListingPaused } from "../actions";
@@ -156,7 +157,9 @@ export default async function ListingsPage() {
               edit any of them whenever you like.
             </Empty>
           ) : (
-            <div className="grid gap-3 mb-9">
+            /* More air between cards than between anything inside one: the
+               gap does as much of the separating as the border does. */
+            <div className="grid gap-5 mb-9">
               {listings.map((l) => {
                 const v = visibility(l, provider.status);
                 const paused = Boolean(l.paused_at);
@@ -167,9 +170,16 @@ export default async function ListingsPage() {
                   !accountOff && provider.status === "active" && l.status === "approved";
 
                 return (
+                  /* A darker border than the rest of the site uses.
+                     A listing card holds three or four hairline dividers of
+                     its own, and at the same weight as its outer edge the
+                     whole column read as one long list of rules — where one
+                     listing ended and the next began was a guess. Sandstone
+                     for the card, sandstone-soft for what is inside it, so the
+                     outline is always the strongest line on the card. */
                   <Card
                     key={l.id}
-                    className={`p-4 ${v.live ? "" : "bg-cream/60"}`}
+                    className={`p-4 border-sandstone ${v.live ? "" : "bg-cream/60"}`}
                   >
                     <div className="flex items-start gap-3">
                       <span className={`text-icon leading-none ${v.live ? "" : "opacity-50"}`}>
@@ -244,21 +254,37 @@ export default async function ListingsPage() {
                       />
                     </div>
 
-                    {/* Additional info and the listing's own details save
-                        separately, so only one of the two is ever open — see
-                        editors.tsx. */}
-                    <ListingEditors
+                    {/* Read-only here; it is edited inside the Edit form with
+                        everything else, so a listing card has one Save. */}
+                    {(l.additional_info || l.additional_info_pending) && (
+                      <div className="mt-3.5 pt-3.5 border-t border-sandstone-soft">
+                        <p className="text-caption font-bold text-charcoal-soft mb-1">
+                          Anything else neighbours should know
+                          {l.additional_info_pending && (
+                            <span className="ml-2 font-normal text-mustard">
+                              new note being checked
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-body text-charcoal-soft leading-snug m-0 whitespace-pre-line">
+                          {l.additional_info ?? l.additional_info_pending}
+                        </p>
+                      </div>
+                    )}
+
+                    <EditListing
                       listing={l}
                       categories={categories}
                       canArchive={listings.length > 1}
-                      info={l.additional_info ?? null}
-                      infoPending={l.additional_info_pending ?? null}
                     />
 
                     {canToggle && (
+                      // No rule above this one: it sits directly under the Edit
+                      // button and reads as one row of actions with it. Every
+                      // divider removed is one less line to count.
                       <form
                         action={setListingPaused}
-                        className="mt-3 pt-3 border-t border-sandstone-soft flex flex-wrap items-center gap-3"
+                        className="mt-3 flex flex-wrap items-center gap-3"
                       >
                         <input type="hidden" name="listing_id" value={l.id} />
                         <input type="hidden" name="paused" value={paused ? "false" : "true"} />
@@ -292,6 +318,20 @@ export default async function ListingsPage() {
               </div>
             </>
           )}
+
+          {/* Pausing everything belongs here, under the listings it affects.
+              It used to be a one-tap button on the dashboard, a screen that
+              shows none of them — so someone who meant to stop cake orders
+              could take their tuition offline without ever seeing it happen. */}
+          <div id="availability" className="mb-9 scroll-mt-24">
+            <SectionHeader>Everything at once</SectionHeader>
+            <Availability
+              status={provider.status}
+              liveListings={liveCount}
+              totalListings={listings.length}
+              pausedListings={listings.filter((l) => l.paused_at).length}
+            />
+          </div>
 
           {/* The lists above use the full width; a form does not — a text field
               1200px wide is harder to fill in, not easier. */}

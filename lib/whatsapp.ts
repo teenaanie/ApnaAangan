@@ -53,3 +53,64 @@ export function waProviderNudge(a: {
     `You are only charged if you accept, and declining is free.`
   );
 }
+
+/**
+ * What an administrator sends a resident whose request went nowhere.
+ *
+ * Nobody else can send this. A provider never sees a resident's number until
+ * they accept — that promise is on the booking form and is enforced by the
+ * database, not by good manners. An administrator can see it, and this is the
+ * one case where using it is the kind thing: a request that was declined, or
+ * that nobody answered for two days, otherwise ends in silence and the
+ * resident is left assuming the whole directory is dead.
+ *
+ * It says what happened, apologises without grovelling, and offers the next
+ * step. It does not tell the resident who declined them or why — that is the
+ * provider's business, and a directory that reports on its own providers is
+ * not one anyone would join.
+ */
+export function waResidentFollowUp(a: {
+  residentName: string;
+  ref: string;
+  message: string;
+  declined: boolean;
+  url: string;
+}): string {
+  const what = a.declined
+    ? "they are not able to take it on right now"
+    : "we have not heard back from them";
+  return (
+    `Hello ${a.residentName}, this is Apna Aangan about your request ${a.ref}.\n\n` +
+    `You asked for: ${a.message}\n\n` +
+    `Unfortunately ${what}. Sorry to keep you waiting.\n\n` +
+    `There may be someone else nearby who can help — have a look here: ${a.url}\n\n` +
+    `If you would like us to find someone for you, just reply to this message.`
+  );
+}
+
+/** What an administrator sends a provider who declined, or left it unanswered. */
+export function waProviderFollowUp(a: {
+  providerName: string;
+  ref: string;
+  residentName: string;
+  message: string;
+  declined: boolean;
+  url: string;
+}): string {
+  if (a.declined) {
+    return (
+      `Hello ${a.providerName}, this is Apna Aangan.\n\n` +
+      `You declined ${a.residentName}'s request (${a.ref}) for: ${a.message}\n\n` +
+      `That is completely fine — declining is free and always will be. We are ` +
+      `only checking whether anything is getting in your way: timing, the kind ` +
+      `of work, or the way requests reach you. Anything you tell us helps.`
+    );
+  }
+  return (
+    `Hello ${a.providerName}, this is Apna Aangan.\n\n` +
+    `${a.residentName}'s request (${a.ref}) is still waiting for an answer: ${a.message}\n\n` +
+    `Declining is free and takes one tap — an answer either way is much better ` +
+    `for them than silence: ${a.url}\n\n` +
+    `If requests are not reaching you properly, tell us and we will sort it out.`
+  );
+}
