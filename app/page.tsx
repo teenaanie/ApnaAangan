@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Nav from "@/components/nav";
 import SocietySelect from "@/components/society-select";
+import SearchBox from "@/components/search-box";
 import { Badge, Card, Empty, Shell } from "@/components/ui";
 import {
   getCategories,
@@ -12,7 +13,7 @@ import {
 import { listingLabel } from "@/lib/listing-label";
 import { BRAND } from "@/lib/brand";
 import type { ListingCard } from "@/lib/types";
-import { Search, CategoryIcon } from "@/components/icons";
+import { CategoryIcon } from "@/components/icons";
 import { VERIFICATION } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
@@ -83,18 +84,7 @@ export default async function Home({
             </Link>
           </p>
 
-          <form action="/" className="relative max-w-xl">
-            {sp.cat && <input type="hidden" name="cat" value={sp.cat} />}
-            {sp.loc && <input type="hidden" name="loc" value={sp.loc} />}
-            <input
-              name="q"
-              defaultValue={sp.q ?? ""}
-              placeholder="Try “cake”, “maths”, “tiffin”, “tailor”…"
-              className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-sandstone bg-surface outline-none focus:border-terracotta text-body"
-              aria-label="Search listings"
-            />
-            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
-          </form>
+          <SearchBox q={sp.q} cat={sp.cat} loc={sp.loc} />
 
           {localities.length > 0 && (
             <div className="mt-4">
@@ -173,15 +163,39 @@ export default async function Home({
         )}
 
         {/* ----------------------------------------------------------- grid */}
+        {/* Name the search in the count. "12 listings" beside a box with
+            "cake" in it leaves the reader to work out whether the filter has
+            applied yet; "12 listings matching cake" answers it. */}
         <p className="text-caption text-charcoal-soft mb-3">
           {listings.length} {listings.length === 1 ? "listing" : "listings"}
+          {sp.q ? (
+            <>
+              {" "}matching <b className="text-charcoal">{sp.q}</b>
+            </>
+          ) : null}
+          {(sp.q || sp.cat || sp.loc) && (
+            <>
+              {" · "}
+              <Link href="/" className="font-bold text-terracotta-deep underline underline-offset-2">
+                Show everything
+              </Link>
+            </>
+          )}
         </p>
 
         {listings.length === 0 ? (
-          <Empty title="Nothing here yet">
-            {sp.q || sp.cat || sp.loc
-              ? "Try clearing the filters, or search for something else."
-              : "Aangan is new in your society. As neighbours add what they make, teach and fix, this fills up — and if you do something yourself, you can be the first."}
+          <Empty title={sp.q ? `Nothing matching “${sp.q}”` : "Nothing here yet"}>
+            {sp.q || sp.cat || sp.loc ? (
+              <>
+                Try a different word, or{" "}
+                <Link href="/" className="font-bold underline">
+                  show everything
+                </Link>
+                .
+              </>
+            ) : (
+              "Aangan is new in your society. As neighbours add what they make, teach and fix, this fills up — and if you do something yourself, you can be the first."
+            )}
           </Empty>
         ) : (
           <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 pb-6">

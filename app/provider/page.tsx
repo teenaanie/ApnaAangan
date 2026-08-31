@@ -422,9 +422,21 @@ function LeadCard({
               {!billing ? "Accept" : isFree ? "Accept — free" : `Accept — ${rupees(fee)}`}
             </Button>
           </form>
-          <form action={respondToLead}>
+          {/* The reason box sits beside the button rather than behind it, so
+              declining is still one tap: press Decline and whatever is in the
+              box — usually nothing — goes with it. Hiding it behind a
+              confirmation step would make saying no slower than ignoring the
+              request, which is the one outcome worse than a decline. */}
+          <form action={respondToLead} className="flex gap-2 flex-1">
             <input type="hidden" name="lead_id" value={lead.id} />
             <input type="hidden" name="decision" value="declined" />
+            <input
+              name="decline_reason"
+              maxLength={300}
+              placeholder="Why? optional"
+              aria-label="Reason for declining, optional"
+              className="min-w-0 flex-1 rounded-full border border-sandstone bg-surface px-3.5 py-2 text-caption outline-none focus:border-terracotta"
+            />
             <Button type="submit" variant="danger">
               Decline
             </Button>

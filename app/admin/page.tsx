@@ -101,7 +101,7 @@ export default async function AdminPage() {
     .from("leads")
     .select(
       "id, ref, message, status, created_at, responded_at, resident_name, resident_phone, " +
-        "requested_time, quoted_fee_paise, " +
+        "requested_time, quoted_fee_paise, decline_reason, " +
         "providers(public_id, display_name, status, provider_contacts(phone))"
     )
     .in("status", ["new", "declined"])
@@ -113,6 +113,7 @@ export default async function AdminPage() {
     responded_at: string | null;
     resident_name: string; resident_phone: string | null;
     requested_time: string | null; quoted_fee_paise: number | null;
+    decline_reason: string | null;
     providers: {
       public_id: string; display_name: string; status: string;
       provider_contacts: { phone: string }[] | { phone: string } | null;
@@ -306,6 +307,13 @@ export default async function AdminPage() {
                           Wanted for {w.requested_time}
                         </p>
                       )}
+                      {/* The lister's own words. Relayed as theirs in the
+                          message below, never rewritten. */}
+                      {w.decline_reason && (
+                        <p className="text-body text-charcoal mt-1.5 m-0">
+                          They said: &ldquo;{w.decline_reason}&rdquo;
+                        </p>
+                      )}
                     </div>
 
                     {/* Both sides of the request are reachable from here.
@@ -366,6 +374,7 @@ export default async function AdminPage() {
                               ref: w.ref,
                               message: w.message,
                               declined,
+                              reason: w.decline_reason,
                               url: siteUrl,
                             })
                           )}

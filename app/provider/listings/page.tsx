@@ -393,7 +393,11 @@ export default async function ListingsPage() {
               1200px wide is harder to fill in, not easier. */}
           <div className="max-w-2xl">
             <SectionHeader>Add another</SectionHeader>
-            <AddListing categories={categories} societyName={societyName} />
+            <AddListing
+              categories={categories}
+              providerId={provider.id}
+              societyName={societyName}
+            />
           </div>
         </div>
       </Shell>

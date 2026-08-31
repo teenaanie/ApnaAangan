@@ -136,30 +136,24 @@ export default function EditListing({
           />
         </Field>
 
-        <div className="grid grid-cols-[1fr_84px] gap-3">
-          <Field label="Category">
-            <select
-              name="category_id"
-              className={inputClass}
-              defaultValue={listing.category_id ?? ""}
-            >
-              <option value="">Choose one</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Icon">
-            <input
-              name="icon"
-              defaultValue={listing.icon ?? "✦"}
-              maxLength={2}
-              className={inputClass}
-            />
-          </Field>
-        </div>
+        {/* No icon box. It asked for an emoji, which assumes an emoji keyboard
+            and the idea that a symbol belongs in a form field — neither of
+            which a person filling this in on a phone has to hand. The category
+            already carries a good one, so the listing takes that. */}
+        <Field label="Category">
+          <select
+            name="category_id"
+            className={inputClass}
+            defaultValue={listing.category_id ?? ""}
+          >
+            <option value="">Choose one</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.icon} {c.label}
+              </option>
+            ))}
+          </select>
+        </Field>
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Starting price (₹)" hint="optional">

@@ -1,9 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { addListing, type ActionState } from "../actions";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Button, Card, Field, Note, inputClass } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { MAX_PHOTOS, PHOTO_TYPES, shrink } from "@/lib/images";
 import type { Category } from "@/lib/types";
 
 function Submit() {
@@ -14,7 +17,6 @@ function Submit() {
 const EMPTY = {
   title: "",
   category_id: "",
-  icon: "✦",
   description: "",
   price_from: "",
   price_unit: "onwards",
@@ -36,19 +38,86 @@ const INFO_MAX = 600;
  */
 export default function AddListing({
   categories,
+  providerId,
   societyName,
 }: {
   categories: Category[];
+  /** Needed to build the storage path, which is scoped per provider. */
+  providerId: string;
   /** Where this listing will appear. Shown rather than asked: a listing
       belongs to the provider's society, and a provider halfway through the
       form should not have to remember which one they chose at sign-up. */
   societyName?: string | null;
 }) {
+  const router = useRouter();
   const [state, action] = useActionState<ActionState, FormData>(addListing, {});
   const [v, setV] = useState(EMPTY);
 
+  /* Photos chosen while writing the listing, uploaded once it exists.
+     A photo belongs to a listing, and the listing has no id until the form has
+     been submitted — so asking for pictures here and uploading them there is
+     the only honest order. The alternative was what we had: no photo field at
+     all, and a provider told to come back and find the card afterwards, which
+     is how listings stay pictureless. */
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [photoNote, setPhotoNote] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    if (state.ok) setV(EMPTY);
+    if (!state.ok) return;
+    setV(EMPTY);
+
+    const chosen = files;
+    setFiles([]);
+    if (fileRef.current) fileRef.current.value = "";
+    if (!chosen.length || !state.listingId) return;
+
+    let cancelled = false;
+    (async () => {
+      setUploading(true);
+      try {
+        const supabase = createClient();
+        for (const file of chosen.slice(0, MAX_PHOTOS)) {
+          const blob = await shrink(file);
+          const path = `${providerId}/${state.listingId}/${crypto.randomUUID()}.jpg`;
+          const up = await supabase.storage
+            .from("listing-photos")
+            .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+          if (up.error) throw new Error(up.error.message);
+
+          const ins = await supabase.from("listing_photos").insert({
+            listing_id: state.listingId,
+            provider_id: providerId,
+            storage_path: path,
+          });
+          // Orphaned bytes help nobody and still count against the quota.
+          if (ins.error) {
+            await supabase.storage.from("listing-photos").remove([path]);
+            throw new Error(ins.error.message);
+          }
+        }
+        if (!cancelled) {
+          setPhotoNote(
+            `${chosen.length} photo${chosen.length === 1 ? "" : "s"} added — they are read before they appear.`
+          );
+          router.refresh();
+        }
+      } catch (err) {
+        if (!cancelled)
+          setPhotoNote(
+            `The listing was added, but the photos did not upload: ${
+              err instanceof Error ? err.message : String(err)
+            }. Add them from the listing above.`
+          );
+      } finally {
+        if (!cancelled) setUploading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   const set =
@@ -73,25 +142,19 @@ export default function AddListing({
           />
         </Field>
 
-        <div className="grid grid-cols-[1fr_84px] gap-3">
-          <Field label="Category">
-            <select
-              name="category_id" value={v.category_id} onChange={set("category_id")}
-              className={inputClass}
-            >
-              <option value="">Choose one</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Icon">
-            <input
-              name="icon" value={v.icon} onChange={set("icon")}
-              className={inputClass} maxLength={2}
-            />
-          </Field>
-        </div>
+        {/* The icon comes from the category now — see the note in the edit
+            form. One less thing to answer. */}
+        <Field label="Category">
+          <select
+            name="category_id" value={v.category_id} onChange={set("category_id")}
+            className={inputClass}
+          >
+            <option value="">Choose one</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+            ))}
+          </select>
+        </Field>
 
         <Field label="Describe it">
           <textarea
@@ -161,8 +224,39 @@ export default function AddListing({
           </span>
         </Field>
 
+        <Field label="Photos" hint="optional — up to 4">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(e) => {
+              const picked = Array.from(e.target.files ?? []).filter((f) =>
+                PHOTO_TYPES.test(f.type)
+              );
+              setFiles(picked.slice(0, MAX_PHOTOS));
+              setPhotoNote("");
+            }}
+            className="block w-full text-body file:mr-3 file:rounded-full file:border file:border-sandstone file:bg-surface file:px-4 file:py-2 file:text-body file:font-bold file:text-charcoal-soft hover:file:border-terracotta"
+          />
+          <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+            {files.length > 0
+              ? `${files.length} chosen. They upload once the listing is created, and are resized for you.`
+              : "A photo of the actual thing sells it better than any description. They are resized for you, so a photo straight off your phone is fine."}
+          </span>
+        </Field>
+
         {state.error && <p className="text-body text-terracotta-deep mb-3">{state.error}</p>}
-        {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
+        {state.ok && (
+          <div className="mb-3">
+            <Note tone="sage">
+              {state.ok}{" "}
+              {uploading
+                ? "Uploading your photos…"
+                : photoNote}
+            </Note>
+          </div>
+        )}
 
         <Submit />
       </form>

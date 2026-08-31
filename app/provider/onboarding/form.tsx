@@ -75,19 +75,16 @@ export default function OnboardingForm({
         <input name="title" required className={inputClass} placeholder="Home-baked eggless cakes" />
       </Field>
 
-      <div className="grid grid-cols-[1fr_84px] gap-3">
-        <Field label="Category">
-          <select name="category_id" className={inputClass} defaultValue="">
-            <option value="">Choose one</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Icon">
-          <input name="icon" className={inputClass} defaultValue="✦" maxLength={2} />
-        </Field>
-      </div>
+      {/* The icon follows the category — asking a new provider to type an
+          emoji into their very first form was never a fair first question. */}
+      <Field label="Category">
+        <select name="category_id" className={inputClass} defaultValue="">
+          <option value="">Choose one</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="Describe it" hint="two or three lines is plenty">
         <textarea name="description" rows={3} className={inputClass}

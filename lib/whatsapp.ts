@@ -75,14 +75,20 @@ export function waResidentFollowUp(a: {
   message: string;
   declined: boolean;
   url: string;
+  /** The lister's own words, if they gave any. Passed on as theirs. */
+  reason?: string | null;
 }): string {
   const what = a.declined
     ? "they are not able to take it on right now"
     : "we have not heard back from them";
+  // Their words, marked as theirs. "Fully booked on Saturday" is worth far
+  // more to the resident than a decline on its own — it is the difference
+  // between asking again next week and giving up on the directory.
+  const because = a.declined && a.reason ? ` They said: “${a.reason}”` : "";
   return (
     `Hello ${a.residentName}, this is Apna Aangan about your request ${a.ref}.\n\n` +
     `You asked for: ${a.message}\n\n` +
-    `Unfortunately ${what}. Sorry to keep you waiting.\n\n` +
+    `Unfortunately ${what}.${because} Sorry to keep you waiting.\n\n` +
     `There may be someone else nearby who can help — have a look here: ${a.url}\n\n` +
     `If you would like us to find someone for you, just reply to this message.`
   );

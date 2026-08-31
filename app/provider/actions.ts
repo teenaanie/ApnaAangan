@@ -5,7 +5,32 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { TERMS_VERSION } from "@/lib/terms";
 
-export type ActionState = { error?: string; ok?: string };
+export type ActionState = {
+  error?: string;
+  ok?: string;
+  /** Set by addListing so the form can upload the photos the provider chose
+   *  while writing it — a photo needs a listing to belong to, and the listing
+   *  does not exist until this returns. */
+  listingId?: string;
+};
+
+/** The icon a listing shows, taken from its category.
+ *
+ * Providers used to be asked for this. It was a text box expecting an emoji,
+ * which assumes an emoji keyboard and the idea that a symbol should be typed
+ * into a form — and most people filling in a listing on a phone have neither
+ * to hand. The categories already carry a good one each, so the answer is
+ * known without asking. Falls back to the four-pointed star.
+ */
+async function iconForCategory(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryId: string | null
+): Promise<string> {
+  if (!categoryId) return "✦";
+  const { data } = await supabase
+    .from("categories").select("icon").eq("id", categoryId).maybeSingle();
+  return (data as { icon: string } | null)?.icon || "✦";
+}
 
 /* --------------------------------------------------------------- onboarding */
 
@@ -22,7 +47,6 @@ export async function createProvider(
   const description = String(formData.get("description") || "").trim();
   const categoryId = String(formData.get("category_id") || "") || null;
   const priceFrom = Number(formData.get("price_from") || 0) || null;
-  const icon = String(formData.get("icon") || "✦").trim() || "✦";
 
   if (!displayName) return { error: "What should neighbours call you?" };
   if (phone.replace(/\D/g, "").length < 10)
@@ -38,6 +62,7 @@ export async function createProvider(
     return { error: "Please read and accept the provider agreement to continue." };
 
   const supabase = await createClient();
+  const icon = await iconForCategory(supabase, categoryId);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/provider/onboarding");
 
@@ -87,10 +112,22 @@ export async function respondToLead(formData: FormData) {
   const decision = String(formData.get("decision") || "");
   if (!leadId || !["accepted", "declined"].includes(decision)) return;
 
+  // Only kept on a decline. Whatever is in the box when someone presses Accept
+  // is not a reason for anything, and storing it would be storing a stray
+  // keystroke against a booking that went ahead.
+  const reason =
+    decision === "declined"
+      ? String(formData.get("decline_reason") || "").trim().slice(0, 300) || null
+      : null;
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("leads")
-    .update({ status: decision, responded_at: new Date().toISOString() })
+    .update({
+      status: decision,
+      responded_at: new Date().toISOString(),
+      decline_reason: reason,
+    })
     .eq("id", leadId);
 
   // The credit limit is enforced by a database trigger, so it surfaces here as
@@ -116,12 +153,12 @@ export async function addListing(
   const priceFrom = Number(formData.get("price_from") || 0) || null;
   const priceUnit = String(formData.get("price_unit") || "onwards").trim();
   const availability = String(formData.get("availability") || "").trim();
-  const icon = String(formData.get("icon") || "✦").trim() || "✦";
   const keywords = parseKeywords(String(formData.get("keywords") || ""));
 
   if (!title) return { error: "A listing needs a title." };
 
   const supabase = await createClient();
+  const icon = await iconForCategory(supabase, categoryId);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/provider/listings");
 
@@ -160,7 +197,10 @@ export async function addListing(
   }
 
   revalidatePath("/provider/listings");
-  return { ok: "Listing submitted. It goes live once it's approved." };
+  return {
+    ok: "Listing submitted. It goes live once it's approved.",
+    listingId: created?.id,
+  };
 }
 
 /* ------------------------------------------------------------------ updates */
@@ -293,13 +333,14 @@ export async function updateListing(
   const priceFrom = Number(formData.get("price_from") || 0) || null;
   const priceUnit = String(formData.get("price_unit") || "onwards").trim();
   const availability = String(formData.get("availability") || "").trim();
-  const icon = String(formData.get("icon") || "").trim();
   const keywords = parseKeywords(String(formData.get("keywords") || ""));
 
   if (!id) return { error: "Which listing?" };
   if (title.length < 3) return { error: "Give the listing a title." };
 
   const supabase = await createClient();
+  // Follows the category, so changing the category changes the icon with it.
+  const icon = await iconForCategory(supabase, categoryId);
   const { data, error } = await supabase.rpc("update_my_listing", {
     p_listing_id: id,
     p_title: title,
