@@ -10,6 +10,7 @@ import {
   searchListings,
 } from "@/lib/data";
 import { listingLabel } from "@/lib/listing-label";
+import { BRAND } from "@/lib/brand";
 import type { ListingCard } from "@/lib/types";
 import { Search, CategoryIcon } from "@/components/icons";
 import { VERIFICATION } from "@/lib/verification";
@@ -50,9 +51,18 @@ export default async function Home({
       <Shell>
         {/* ------------------------------------------------------------ hero */}
         <section className="pt-9 pb-1">
-          <h1 className="title max-w-[20ch] mb-3">
-            The people who make, teach and fix — close to home.
+          {/* The name first, then what it is.
+              The hero used to open with the tagline alone, which read as a
+              nice sentence by nobody in particular — a first-time visitor
+              arriving from a QR code on a notice board had to look at the
+              header to work out where they were. The name is the heading now,
+              and the tagline sits under it doing the explaining. */}
+          <h1 className="title max-w-[22ch] mb-2">
+            {BRAND.name} <span className="whitespace-nowrap">— {BRAND.descriptor}</span>
           </h1>
+          <p className="text-subheading text-charcoal max-w-[34ch] mb-3">
+            {BRAND.tagline}
+          </p>
           <p className="text-charcoal-soft max-w-[54ch] mb-5">
             Home bakers, tuition teachers, tailors, trainers. Neighbours you would
             never know about until someone happened to mention them.
