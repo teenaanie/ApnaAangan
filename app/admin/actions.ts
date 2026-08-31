@@ -265,15 +265,49 @@ export async function addSociety(
   if (pincode && !/^\d{6}$/.test(pincode))
     return { error: "An Indian pincode is 6 digits, or leave it blank." };
 
-  const slug = slugify(name);
+  let slug = slugify(name);
   if (!slug) return { error: "That name has no letters or numbers in it." };
 
   const supabase = await assertAdmin();
 
-  const { data: clash } = await supabase
-    .from("localities").select("name").eq("slug", slug).maybeSingle();
-  if (clash)
-    return { error: `“${(clash as { name: string }).name}” already uses that name.` };
+  /* Two different clashes, and they are not the same problem.
+   *
+   * A NAME clash is real: two societies called the same thing would be
+   * indistinguishable in the dropdown a provider picks from.
+   *
+   * A SLUG clash is bookkeeping. The slug is the web address a society is
+   * filtered by, and it is deliberately never changed when a society is
+   * renamed — links residents have already been given would stop working.
+   * That means a society renamed from "Cloud 9 Bunglows" to "Sample Residency
+   * 2" is still sitting on the address `cloud-9-bunglows`, and adding a fresh
+   * "Cloud 9 Bunglows" collided with it. The refusal even named the other
+   * society by its NEW name, so the message read as nonsense: "Sample
+   * Residency 2 already uses that name" when plainly it does not.
+   *
+   * Reported 31 August 2026 — a real society could not be added because of an
+   * address nobody could see, belonging to a society with a different name.
+   *
+   * So: refuse on the name, and quietly find a free address on a slug clash.
+   */
+  const { data: nameClash } = await supabase
+    .from("localities")
+    .select("name")
+    .ilike("name", name)
+    .maybeSingle();
+  if (nameClash)
+    return { error: `There is already a society called “${name}”.` };
+
+  const { data: taken } = await supabase
+    .from("localities")
+    .select("slug")
+    .like("slug", `${slug}%`);
+
+  const used = new Set(((taken ?? []) as Array<{ slug: string }>).map((r) => r.slug));
+  if (used.has(slug)) {
+    let n = 2;
+    while (used.has(`${slug}-${n}`)) n += 1;
+    slug = `${slug}-${n}`;
+  }
 
   const { error } = await supabase.from("localities").insert({
     name,
@@ -326,7 +360,11 @@ export async function renameSociety(
 
   revalidatePath("/admin/societies");
   revalidatePath("/");
-  return { ok: "Saved." };
+  // The slug is deliberately not updated. It is the address in every link a
+  // resident may already have — /?loc=cloud-9-bunglows — and rewriting it
+  // would quietly break those. The societies list shows the address beside
+  // each name so it is not a hidden fact.
+  return { ok: "Saved. The web address for this society is unchanged, so links already shared still work." };
 }
 
 /**

@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 import Nav from "@/components/nav";
 import CopyLink from "./copy-link";
 import { Badge, Card, Note, SectionHeader, Shell } from "@/components/ui";
-import { getListingsForProvider, getMyProvider, isConfigured } from "@/lib/data";
+import { getListingsForProvider, getManagedProvider, isConfigured } from "@/lib/data";
 import { Logo } from "@/components/logo";
 import { Download } from "@/components/icons";
 import { absoluteLink } from "@/lib/site";
@@ -24,12 +24,12 @@ const QR_OPTS = {
 export default async function SharePage({
   searchParams,
 }: {
-  searchParams: Promise<{ listing?: string }>;
+  searchParams: Promise<{ listing?: string; as?: string }>;
 }) {
   if (!isConfigured()) redirect("/");
-  const provider = await getMyProvider();
-  if (!provider) redirect("/provider/onboarding");
   const sp = await searchParams;
+  const { provider, managing } = await getManagedProvider(sp.as);
+  if (!provider) redirect("/provider/onboarding");
 
   // Read through listing_cards — the same view residents read. Anything hidden
   // by a pause, a moderation hold or a suspension is absent here for exactly
@@ -115,14 +115,14 @@ export default async function SharePage({
               of per-listing links, which left this screen a dead end. */}
           <p className="mb-6 flex flex-wrap gap-4">
             <Link
-              href="/provider/listings"
+              href={managing ? `/provider/listings?as=${provider.id}` : "/provider/listings"}
               className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
-              ← My listings
+              {managing ? `← ${provider.display_name}\u2019s listings` : "← My listings"}
             </Link>
             {one && (
               <Link
-                href="/provider/share"
+                href={managing ? `/provider/share?as=${provider.id}` : "/provider/share"}
                 className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
               >
                 All my links

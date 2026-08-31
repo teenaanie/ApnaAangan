@@ -50,6 +50,7 @@ export default function ListingUpdate({
   live,
   label = "this listing",
   placement = "top",
+  asProvider,
 }: {
   /** Undefined means the update is about everything the provider offers. */
   listingId?: string;
@@ -66,6 +67,9 @@ export default function ListingUpdate({
    * should hold and left the two cards looking identical down the page.
    */
   placement?: "top" | "inline";
+  /** Set when an administrator is managing this provider's listings. The
+      server action refuses it unless the caller really is an administrator. */
+  asProvider?: string;
 }) {
   const [state, action] = useActionState<ActionState, FormData>(postUpdate, {});
   const [open, setOpen] = useState(false);
@@ -144,6 +148,7 @@ export default function ListingUpdate({
     >
       <form action={action}>
         {listingId && <input type="hidden" name="listing_id" value={listingId} />}
+        {asProvider && <input type="hidden" name="as" value={asProvider} />}
 
         <label className="block mb-3">
           <span className="block text-body font-bold mb-1">

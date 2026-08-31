@@ -10,7 +10,7 @@ import { photoBase } from "@/lib/site";
 import { setListingPaused } from "../actions";
 import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
-import { getPhotosForProvider, getCategories, getMyProvider, isConfigured } from "@/lib/data";
+import { getPhotosForProvider, getCategories, getManagedProvider, isConfigured } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Your listings" };
@@ -59,9 +59,18 @@ function visibility(l: Row, providerStatus: string) {
   return { live: true, label: "Live", why: null as string | null };
 }
 
-export default async function ListingsPage() {
+export default async function ListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ as?: string }>;
+}) {
   if (!isConfigured()) redirect("/");
-  const provider = await getMyProvider();
+  const sp = await searchParams;
+
+  /* `?as=<provider id>` opens somebody else's screens, for an administrator
+     managing a listing they created on request. Ignored for everyone else —
+     see getManagedProvider, and migration 0031 for the write side. */
+  const { provider, managing } = await getManagedProvider(sp.as);
   if (!provider) redirect("/provider/onboarding");
 
   const base = photoBase();
@@ -136,19 +145,34 @@ export default async function ListingsPage() {
               answers "how does my page look" when the question a provider is
               actually asking is "how does THIS look". It now sits on each
               listing and opens the page with that one selected. */}
+          {managing && (
+            <div className="mb-5">
+              <Note tone="mustard">
+                <b>You are managing {provider.display_name}&rsquo;s listings.</b>{" "}
+                Anything you change here is theirs, and shows on their page as
+                if they had done it.{" "}
+                <Link href="/admin/providers" className="underline font-bold">
+                  Back to providers
+                </Link>
+              </Note>
+            </div>
+          )}
+
           <p className="mb-3">
             <Link
-              href="/provider"
+              href={managing ? "/admin/providers" : "/provider"}
               className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
             >
-              ← My dashboard
+              {managing ? "← Back to providers" : "← My dashboard"}
             </Link>
           </p>
-          <h1 className="m-0 mb-1">Your listings</h1>
+          <h1 className="m-0 mb-1">
+            {managing ? `${provider.display_name}\u2019s listings` : "Your listings"}
+          </h1>
           <p className="text-charcoal-soft text-body mb-6">
             {liveCount} of {listings.length} visible to neighbours right now.{" "}
             <Link
-              href="/provider/share"
+              href={managing ? `/provider/share?as=${provider.id}` : "/provider/share"}
               className="font-bold text-terracotta-deep underline underline-offset-2"
             >
               Share your link and QR code
@@ -224,6 +248,7 @@ export default async function ListingsPage() {
                         listingId={l.id}
                         live={updateByListing[l.id]}
                         label="this listing"
+                        asProvider={managing ? provider.id : undefined}
                       />
                     )}
 
@@ -282,7 +307,7 @@ export default async function ListingsPage() {
                               See it live →
                             </Link>
                             <Link
-                              href={`/provider/share?listing=${l.id}`}
+                              href={`/provider/share?listing=${l.id}${managing ? `&as=${provider.id}` : ""}`}
                               className="block text-caption font-bold text-terracotta-deep hover:underline mt-1"
                             >
                               Share &amp; QR →
@@ -328,6 +353,7 @@ export default async function ListingsPage() {
                         live={null}
                         label="this listing"
                         placement="inline"
+                        asProvider={managing ? provider.id : undefined}
                       />
                     )}
 
@@ -347,6 +373,7 @@ export default async function ListingsPage() {
                       >
                         <input type="hidden" name="listing_id" value={l.id} />
                         <input type="hidden" name="paused" value={paused ? "false" : "true"} />
+                        {managing && <input type="hidden" name="as" value={provider.id} />}
                         <Button type="submit" variant={paused ? "sage" : "ghost"}>
                           {paused ? "Resume this listing" : "Pause this one"}
                         </Button>
@@ -389,7 +416,11 @@ export default async function ListingsPage() {
                 they make — away until Monday, a change of address. It shows
                 above every listing on their page. */}
             <Card className="p-4 mb-3">
-              <ListingUpdate live={wholePageUpdate} label="all your listings" />
+              <ListingUpdate
+                live={wholePageUpdate}
+                label="all your listings"
+                asProvider={managing ? provider.id : undefined}
+              />
               <p className="text-caption text-charcoal-faint m-0">
                 This one is about you rather than about a single listing, so it
                 shows above everything on your page.
@@ -412,6 +443,7 @@ export default async function ListingsPage() {
               categories={categories}
               providerId={provider.id}
               societyName={societyName}
+              asProvider={managing ? provider.id : undefined}
             />
           </div>
         </div>

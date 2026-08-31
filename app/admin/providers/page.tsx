@@ -245,7 +245,17 @@ function ProviderRow({ r }: { r: Row }) {
           {!r.user_id && (
             <div className="mt-1.5">
               <Badge tone="mustard">You manage this one</Badge>
-              <div className="mt-1">
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                {/* Opens their listings screens, with every control working —
+                    edit, photos, another listing, what's on today. Creating a
+                    listing for someone and then not being able to touch it was
+                    half a feature. */}
+                <Link
+                  href={`/provider/listings?as=${r.id}`}
+                  className="text-caption font-bold text-terracotta-deep hover:underline underline-offset-2"
+                >
+                  Manage their listings →
+                </Link>
                 <AttachAccount providerId={r.id} />
               </div>
             </div>

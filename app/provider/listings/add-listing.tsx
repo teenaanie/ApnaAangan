@@ -40,6 +40,7 @@ export default function AddListing({
   categories,
   providerId,
   societyName,
+  asProvider,
 }: {
   categories: Category[];
   /** Needed to build the storage path, which is scoped per provider. */
@@ -48,6 +49,8 @@ export default function AddListing({
       belongs to the provider's society, and a provider halfway through the
       form should not have to remember which one they chose at sign-up. */
   societyName?: string | null;
+  /** Set when an administrator is adding a listing for this provider. */
+  asProvider?: string;
 }) {
   const router = useRouter();
   const [state, action] = useActionState<ActionState, FormData>(addListing, {});
@@ -135,6 +138,8 @@ export default function AddListing({
         </p>
       )}
       <form action={action}>
+        {asProvider && <input type="hidden" name="as" value={asProvider} />}
+
         <Field label="What do you offer?">
           <input
             name="title" required value={v.title} onChange={set("title")}

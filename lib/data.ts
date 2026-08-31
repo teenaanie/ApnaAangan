@@ -80,6 +80,56 @@ export const getMyProvider = cache(async (): Promise<Provider | null> => {
   } as Provider;
 });
 
+/**
+ * The provider whose screens are being shown.
+ *
+ * Normally that is the signed-in provider. An administrator can also open
+ * somebody else's — `?as=<provider id>` — which is what makes a listing they
+ * created for a neighbour manageable rather than just visible. Migration 0031
+ * lets the write paths through on the same `is_admin()` test, so this cannot
+ * hand out reach the database would refuse anyway.
+ *
+ * Returns null rather than throwing when a non-admin passes `as`: to them the
+ * parameter simply does not exist, and they see their own screens.
+ */
+export const getManagedProvider = cache(
+  async (as?: string): Promise<{ provider: Provider | null; managing: boolean }> => {
+    const mine = await getMyProvider();
+    if (!as) return { provider: mine, managing: false };
+
+    const profile = await getProfile();
+    if (profile?.role !== "admin") return { provider: mine, managing: false };
+    if (mine?.id === as) return { provider: mine, managing: false };
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("providers")
+      .select(PROVIDER_PUBLIC_COLS)
+      .eq("id", as)
+      .maybeSingle();
+    if (!data) return { provider: mine, managing: false };
+
+    const { data: stats } = await supabase
+      .from("provider_stats")
+      .select("leads_total, leads_accepted, free_leads_remaining, balance_paise, credit_limit_paise")
+      .eq("id", as)
+      .maybeSingle();
+
+    return {
+      provider: {
+        leads_total: 0,
+        leads_accepted: 0,
+        free_leads_remaining: 0,
+        balance_paise: 0,
+        credit_limit_paise: 50000,
+        ...(stats ?? {}),
+        ...(data as object),
+      } as Provider,
+      managing: true,
+    };
+  }
+);
+
 export const getCategories = cache(async (): Promise<Category[]> => {
   if (!isConfigured()) return [];
   const supabase = await createClient();

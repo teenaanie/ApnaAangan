@@ -14,6 +14,33 @@ export type ActionState = {
   listingId?: string;
 };
 
+/**
+ * Whose listings are being worked on.
+ *
+ * Normally the signed-in user's own provider row. An administrator managing a
+ * listing they created for somebody may pass that provider's id — and only an
+ * administrator: the check is made here, and again by the database, which
+ * refuses the write outright for anyone else (migration 0031).
+ */
+async function actingProviderId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  asProvider: string | null
+): Promise<string | null> {
+  if (asProvider) {
+    const { data: me } = await supabase
+      .from("profiles").select("role").eq("id", userId).maybeSingle();
+    if ((me as { role?: string } | null)?.role === "admin") {
+      const { data: them } = await supabase
+        .from("providers").select("id").eq("id", asProvider).maybeSingle();
+      if (them) return (them as { id: string }).id;
+    }
+  }
+  const { data: mine } = await supabase
+    .from("providers").select("id").eq("user_id", userId).maybeSingle();
+  return (mine as { id: string } | null)?.id ?? null;
+}
+
 /** The icon a listing shows, taken from its category.
  *
  * Providers used to be asked for this. It was a text box expecting an emoji,
@@ -162,9 +189,11 @@ export async function addListing(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/provider/listings");
 
-  const { data: provider } = await supabase
-    .from("providers").select("id").eq("user_id", user.id).maybeSingle();
-  if (!provider) return { error: "Set up your provider profile first." };
+  const providerId = await actingProviderId(
+    supabase, user.id, String(formData.get("as") || "") || null
+  );
+  if (!providerId) return { error: "Set up your provider profile first." };
+  const provider = { id: providerId };
 
   const { data: created, error } = await supabase
     .from("listings")
@@ -221,9 +250,11 @@ export async function postUpdate(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login?next=/provider");
 
-  const { data: provider } = await supabase
-    .from("providers").select("id").eq("user_id", user.id).maybeSingle();
-  if (!provider) return { error: "Set up your provider profile first." };
+  const providerId = await actingProviderId(
+    supabase, user.id, String(formData.get("as") || "") || null
+  );
+  if (!providerId) return { error: "Set up your provider profile first." };
+  const provider = { id: providerId };
 
   // Which listing this is about. Empty means the whole page — "away until
   // Monday" belongs above everything, not filed under one listing.
