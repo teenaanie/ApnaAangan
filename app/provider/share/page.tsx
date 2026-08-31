@@ -110,16 +110,25 @@ export default async function SharePage({
             your neighbours too.
           </p>
 
-          {one && (
-            <p className="mb-6">
+          {/* A way out that does not rely on the browser's back button.
+              The dashboard's row of destination buttons was removed in favour
+              of per-listing links, which left this screen a dead end. */}
+          <p className="mb-6 flex flex-wrap gap-4">
+            <Link
+              href="/provider/listings"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+            >
+              ← My listings
+            </Link>
+            {one && (
               <Link
                 href="/provider/share"
                 className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
               >
-                ← All my links
+                All my links
               </Link>
-            </p>
-          )}
+            )}
+          </p>
 
           {hiddenReason ? (
             <Note tone="mustard">

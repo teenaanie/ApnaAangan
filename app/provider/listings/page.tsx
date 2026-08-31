@@ -103,6 +103,14 @@ export default async function ListingsPage() {
               answers "how does my page look" when the question a provider is
               actually asking is "how does THIS look". It now sits on each
               listing and opens the page with that one selected. */}
+          <p className="mb-3">
+            <Link
+              href="/provider"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+            >
+              ← My dashboard
+            </Link>
+          </p>
           <h1 className="m-0 mb-1">Your listings</h1>
           <p className="text-charcoal-soft text-body mb-6">
             {liveCount} of {listings.length} visible to neighbours right now.{" "}

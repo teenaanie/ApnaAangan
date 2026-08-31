@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import Nav from "@/components/nav";
 import BookingForm from "./booking-form";
 import { Badge, Card, Note, SectionHeader, Shell, Stat } from "@/components/ui";
@@ -10,6 +11,7 @@ import {
   getProviderByPublicId,
   getTodayForProvider,
   getApprovedPhotos,
+  getMyProvider,
   isConfigured,
 } from "@/lib/data";
 
@@ -40,10 +42,15 @@ export default async function ProviderPage({
   const provider = await getProviderByPublicId(publicId);
   if (!provider) notFound();
 
-  const [listings, today] = await Promise.all([
+  const [listings, today, me] = await Promise.all([
     getListingsForProvider(provider.id),
     getTodayForProvider(provider.id),
+    // Only to decide whether to offer a way back to the provider's own
+    // screens. Nothing on this page changes for the owner otherwise — a
+    // preview that behaves differently from the real thing is not a preview.
+    getMyProvider(),
   ]);
+  const isOwner = me?.id === provider.id;
 
   const photos = await getApprovedPhotos(listings.map((l) => l.id));
   const base = photoBase();
@@ -67,6 +74,23 @@ export default async function ProviderPage({
                 you directly. Quote <b>{sp.sent}</b> if you need to follow it up.
               </p>
             </Card>
+          </div>
+        )}
+
+        {/* Shown only to the person whose page this is. They arrive here from
+            "See it live" to check one listing, and until now the only way back
+            was the browser's own button. A resident sees nothing extra. */}
+        {isOwner && (
+          <div className="mt-5 -mb-3 flex flex-wrap gap-4">
+            <Link
+              href="/provider/listings"
+              className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep"
+            >
+              ← My listings
+            </Link>
+            <span className="text-body text-charcoal-faint">
+              This is what a neighbour sees.
+            </span>
           </div>
         )}
 
