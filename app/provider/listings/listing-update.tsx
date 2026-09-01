@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { postUpdate, type ActionState } from "../actions";
 import { Button, Note, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { Clock } from "@/components/icons";
 
 export type LiveUpdateRow = {
@@ -23,11 +23,10 @@ const KINDS = [
 ] as const;
 
 function Post() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Posting…" : "Post it"}
-    </Button>
+    <SubmitButton pendingLabel="Posting…">
+      Post it
+    </SubmitButton>
   );
 }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Field, Note, inputClass } from "@/components/ui";
+import { Spinner } from "@/components/icons";
 
 /**
  * Set a new password.
@@ -121,7 +122,8 @@ export default function ResetForm() {
         />
       </Field>
 
-      <Button type="submit" full disabled={busy}>
+      <Button type="submit" full disabled={busy} style={busy ? { opacity: 0.95 } : undefined}>
+        {busy && <Spinner size={15} />}
         {busy ? "Saving…" : "Set my new password"}
       </Button>
 

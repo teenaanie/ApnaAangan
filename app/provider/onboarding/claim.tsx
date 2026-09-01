@@ -1,16 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { claimListing, type ActionState } from "../actions";
-import { Button, Card, Field, Note, SectionHeader, inputClass } from "@/components/ui";
+import { Card, Field, Note, SectionHeader, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 function Claim() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Checking…" : "This is mine"}
-    </Button>
+    <SubmitButton pendingLabel="Checking…">
+      This is mine
+    </SubmitButton>
   );
 }
 

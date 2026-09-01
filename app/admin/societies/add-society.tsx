@@ -1,16 +1,15 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { addSociety, type SocietyState } from "../actions";
-import { Button, Card, Field, inputClass } from "@/components/ui";
+import { Card, Field, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 function Submit() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Adding…" : "Add society"}
-    </Button>
+    <SubmitButton pendingLabel="Adding…">
+      Add society
+    </SubmitButton>
   );
 }
 

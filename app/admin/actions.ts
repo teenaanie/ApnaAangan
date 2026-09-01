@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isGoogleMapsUrl } from "@/lib/maps";
 import { TERMS_VERSION } from "@/lib/terms";
+import { absoluteLink } from "@/lib/site";
 
 async function assertAdmin() {
   const supabase = await createClient();
@@ -410,7 +411,17 @@ export async function decidePhoto(formData: FormData) {
 
 /* ------------------------------------------- listing on a provider's behalf */
 
-export type ListForState = { error?: string; ok?: string; publicId?: string };
+export type ListForState = {
+  error?: string;
+  ok?: string;
+  publicId?: string;
+  /** Set when the listing is held for the lister to accept. The whole point of
+      the flow: an absolute link the administrator sends them. */
+  consentUrl?: string;
+  /** Their number, so the WhatsApp button can address it directly. */
+  phone?: string;
+  name?: string;
+};
 
 /**
  * Create a provider, their number and their first listing, all at once.
@@ -431,10 +442,20 @@ export async function listForProvider(
 ): Promise<ListForState> {
   const supabase = await assertAdmin();
 
-  // Recorded, not assumed. A provider agreement marked "accepted" with nobody
-  // standing behind it is worth less than one that was never asked for — the
-  // function stores which administrator ticked this.
-  if (formData.get("terms_confirmed") !== "on")
+  // Two honest ways to do this, and the form makes you pick one.
+  //
+  // "send" holds everything and asks the lister themselves — the default,
+  // because a listing that goes live carrying terms about fees and liability
+  // that the person named on it has never read is the thing this flow exists
+  // to stop.
+  //
+  // "confirm" is the old path, for the baker standing beside you while you
+  // type. It records the agreement with the ADMINISTRATOR'S id against it,
+  // which is what actually happened.
+  const how = String(formData.get("consent_how") || "send");
+  const awaitConsent = how !== "confirm";
+
+  if (!awaitConsent && formData.get("terms_confirmed") !== "on")
     return {
       error:
         "Confirm you have read the provider agreement to them, or sent it to them, before listing on their behalf.",
@@ -454,25 +475,84 @@ export async function listForProvider(
     p_price_unit: String(formData.get("price_unit") || "onwards").trim(),
     p_availability: String(formData.get("availability") || "").trim() || null,
     p_keywords: parseKeywordList(String(formData.get("keywords") || "")),
-    p_terms_version: TERMS_VERSION,
+    p_terms_version: awaitConsent ? null : TERMS_VERSION,
     p_claim_email: String(formData.get("claim_email") || "").trim() || null,
+    p_await_consent: awaitConsent,
   });
   if (error) return { error: error.message };
 
-  const res = data as { ok: boolean; error?: string; public_id?: string };
+  const res = data as {
+    ok: boolean;
+    error?: string;
+    public_id?: string;
+    consent_token?: string;
+  };
   if (!res?.ok) return { error: res?.error ?? "Could not create that." };
 
   revalidatePath("/admin/providers");
   revalidatePath("/admin");
   revalidatePath("/");
 
+  const claimEmail = String(formData.get("claim_email") || "").trim();
+
+  if (res.consent_token) {
+    return {
+      ok: `Drafted as ${res.public_id}. Nothing is live yet — send them this link, and it goes live when they accept.`,
+      publicId: res.public_id,
+      consentUrl: await absoluteLink(`/list/accept/${res.consent_token}`),
+      phone: String(formData.get("phone") || "").trim(),
+      name: String(formData.get("display_name") || "").trim(),
+    };
+  }
+
   return {
     ok:
       `Listed. Their provider ID is ${res.public_id}, and it is live in the directory now.` +
-      (String(formData.get("claim_email") || "").trim()
+      (claimEmail
         ? " They can claim it themselves by signing up with that email address."
         : ""),
     publicId: res.public_id,
+  };
+}
+
+/**
+ * Issue a fresh acceptance link for a listing nobody has agreed to yet.
+ *
+ * For the message that never arrived, the link that expired, or the number
+ * that turned out to be wrong. Issuing a new one retires the old one, so a
+ * link sent to a wrong number stops working the moment you replace it.
+ *
+ * The database refuses this for anyone whose terms are already accepted, so it
+ * can never be used to re-open a listing whose owner has agreed to it.
+ */
+export async function issueConsentLink(
+  _prev: ListForState,
+  formData: FormData
+): Promise<ListForState> {
+  const supabase = await assertAdmin();
+  const providerId = String(formData.get("provider_id") || "");
+  if (!providerId) return { error: "Which listing?" };
+
+  const { data, error } = await supabase.rpc("admin_consent_link", {
+    p_provider_id: providerId,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as {
+    ok: boolean;
+    error?: string;
+    consent_token?: string;
+    display_name?: string;
+  };
+  if (!res?.ok || !res.consent_token)
+    return { error: res?.error ?? "Could not make a link." };
+
+  revalidatePath("/admin/providers");
+  return {
+    ok: "New link ready. The previous one has stopped working.",
+    consentUrl: await absoluteLink(`/list/accept/${res.consent_token}`),
+    phone: String(formData.get("phone") || "").trim(),
+    name: res.display_name,
   };
 }
 

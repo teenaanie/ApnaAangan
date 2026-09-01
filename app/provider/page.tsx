@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { respondToLead } from "./actions";
 import Availability from "./availability";
-import { Badge, Button, Card, Empty, LinkButton, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
+import { Badge, Card, Empty, LinkButton, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
 import { getBillingEnabled, getMyProvider, isConfigured } from "@/lib/data";
 import { FREE_LEADS, rupees } from "@/lib/brand";
@@ -429,9 +430,9 @@ function LeadCard({
           <form action={respondToLead} className="flex-1">
             <input type="hidden" name="lead_id" value={lead.id} />
             <input type="hidden" name="decision" value="accepted" />
-            <Button type="submit" variant="sage" full>
+            <SubmitButton variant="sage" full>
               {!billing ? "Accept" : isFree ? "Accept — free" : `Accept — ${rupees(fee)}`}
-            </Button>
+            </SubmitButton>
           </form>
           {/* The reason box sits beside the button rather than behind it, so
               declining is still one tap: press Decline and whatever is in the
@@ -448,9 +449,9 @@ function LeadCard({
               aria-label="Reason for declining, optional"
               className="min-w-0 flex-1 rounded-full border border-sandstone bg-surface px-3.5 py-2 text-caption outline-none focus:border-terracotta"
             />
-            <Button type="submit" variant="danger">
+            <SubmitButton variant="danger">
               Decline
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       )}

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import { decideAdditionalInfo, decidePhoto, moderateListing, moderateProvider, moderateUpdate, resolveBlockedAttempt, restoreRejected } from "./actions";
-import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
+import { Badge, Card, Empty, Note, SectionHeader, Shell, WideShell, Stat } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
 import { emailIsConfigured } from "@/lib/email";
@@ -26,7 +27,12 @@ export default async function AdminPage() {
     // approving a person AND what they propose to sell, in a single look.
     supabase.from("providers")
       .select("id, public_id, display_name, about, status, created_at, listings(id, title, description, status), provider_contacts(phone)")
-      .eq("status", "pending").order("created_at"),
+      // A listing drafted by an administrator and waiting on the LISTER is
+      // also 'pending', and must not appear here. Approving it would put it
+      // live carrying an agreement nobody has read — which is the one thing
+      // the consent flow exists to prevent. It is on the providers screen,
+      // labelled as waiting on them. (The database refuses it too; see 0033.)
+      .eq("status", "pending").is("consent_sent_at", null).order("created_at"),
     // !inner + the status filter keeps a new provider out of BOTH queues at
     // once. Their first listing rides along with the decision about them
     // (see moderateProvider); this section is for listings added later, by
@@ -446,12 +452,12 @@ export default async function AdminPage() {
                     <form action={moderateProvider}>
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="status" value="active" />
-                      <Button type="submit" variant="sage">Approve</Button>
+                      <SubmitButton variant="sage">Approve</SubmitButton>
                     </form>
                     <form action={moderateProvider}>
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="status" value="rejected" />
-                      <Button type="submit" variant="danger">Reject</Button>
+                      <SubmitButton variant="danger">Reject</SubmitButton>
                     </form>
                   </div>
                 </Card>
@@ -542,12 +548,12 @@ export default async function AdminPage() {
                     <form action={moderateListing}>
                       <input type="hidden" name="id" value={l.id} />
                       <input type="hidden" name="status" value="approved" />
-                      <Button type="submit" variant="sage">Approve</Button>
+                      <SubmitButton variant="sage">Approve</SubmitButton>
                     </form>
                     <form action={moderateListing}>
                       <input type="hidden" name="id" value={l.id} />
                       <input type="hidden" name="status" value="rejected" />
-                      <Button type="submit" variant="danger">Reject</Button>
+                      <SubmitButton variant="danger">Reject</SubmitButton>
                     </form>
                   </div>
                 </Card>
@@ -581,12 +587,12 @@ export default async function AdminPage() {
                     <form action={decidePhoto} className="flex-1">
                       <input type="hidden" name="id" value={ph.id} />
                       <input type="hidden" name="approve" value="yes" />
-                      <Button type="submit" variant="sage" full>Approve</Button>
+                      <SubmitButton variant="sage" full>Approve</SubmitButton>
                     </form>
                     <form action={decidePhoto}>
                       <input type="hidden" name="id" value={ph.id} />
                       <input type="hidden" name="approve" value="no" />
-                      <Button type="submit" variant="danger">Reject</Button>
+                      <SubmitButton variant="danger">Reject</SubmitButton>
                     </form>
                   </div>
                 </Card>
@@ -626,12 +632,12 @@ export default async function AdminPage() {
                     <form action={moderateUpdate}>
                       <input type="hidden" name="id" value={u.id} />
                       <input type="hidden" name="status" value="approved" />
-                      <Button type="submit" variant="sage">Approve</Button>
+                      <SubmitButton variant="sage">Approve</SubmitButton>
                     </form>
                     <form action={moderateUpdate}>
                       <input type="hidden" name="id" value={u.id} />
                       <input type="hidden" name="status" value="rejected" />
-                      <Button type="submit" variant="danger">Reject</Button>
+                      <SubmitButton variant="danger">Reject</SubmitButton>
                     </form>
                   </div>
                 </Card>
@@ -673,12 +679,12 @@ export default async function AdminPage() {
                     <form action={decideAdditionalInfo}>
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="approve" value="yes" />
-                      <Button type="submit" variant="sage">Publish</Button>
+                      <SubmitButton variant="sage">Publish</SubmitButton>
                     </form>
                     <form action={decideAdditionalInfo}>
                       <input type="hidden" name="id" value={p.id} />
                       <input type="hidden" name="approve" value="no" />
-                      <Button type="submit" variant="danger">Reject</Button>
+                      <SubmitButton variant="danger">Reject</SubmitButton>
                     </form>
                     <span className="text-caption text-charcoal-faint self-center">
                       Rejecting leaves whatever is already on their page.
@@ -767,12 +773,12 @@ export default async function AdminPage() {
                     <form action={resolveBlockedAttempt}>
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="action" value="block" />
-                      <Button type="submit" variant="danger">Block this number</Button>
+                      <SubmitButton variant="danger">Block this number</SubmitButton>
                     </form>
                     <form action={resolveBlockedAttempt}>
                       <input type="hidden" name="id" value={b.id} />
                       <input type="hidden" name="action" value="dismiss" />
-                      <Button type="submit" variant="sage">Allow — false alarm</Button>
+                      <SubmitButton variant="sage">Allow — false alarm</SubmitButton>
                     </form>
                   </div>
                 </Card>
@@ -860,7 +866,7 @@ function RejectedCard({
       <form action={restoreRejected}>
         <input type="hidden" name="id" value={id} />
         <input type="hidden" name="kind" value={kind} />
-        <Button type="submit" variant="ghost">Restore to queue</Button>
+        <SubmitButton variant="ghost">Restore to queue</SubmitButton>
       </form>
     </Card>
   );

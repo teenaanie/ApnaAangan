@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { setAvailability, type ActionState } from "./actions";
 import { Button, Card, Note, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 function Submit({ label, variant }: { label: string; variant: "sage" | "ghost" | "danger" }) {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending}>
-      {pending ? "Saving…" : label}
-    </Button>
+    <SubmitButton variant={variant} pendingLabel="Saving…">
+      {label}
+    </SubmitButton>
   );
 }
 

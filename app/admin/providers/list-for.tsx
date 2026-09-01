@@ -1,17 +1,17 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { listForProvider, type ListForState } from "../actions";
 import { Button, Card, Field, Note, SectionHeader, inputClass } from "@/components/ui";
+import ConsentLink from "./consent-link";
+import { SubmitButton } from "@/components/submit";
 import type { Category, Locality } from "@/lib/types";
 
-function Submit() {
-  const { pending } = useFormStatus();
+function Submit({ how }: { how: "send" | "confirm" }) {
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Listing…" : "List them"}
-    </Button>
+    <SubmitButton pendingLabel={how === "send" ? "Drafting…" : "Listing…"}>
+      {how === "send" ? "Draft it and make a link" : "List them"}
+    </SubmitButton>
   );
 }
 
@@ -52,6 +52,8 @@ export default function ListForProvider({
   const [open, setOpen] = useState(false);
   const [v, setV] = useState(EMPTY);
 
+  const [how, setHow] = useState<"send" | "confirm">("send");
+
   useEffect(() => {
     if (state.ok) setV(EMPTY);
   }, [state]);
@@ -70,6 +72,18 @@ export default function ListForProvider({
         {state.ok && (
           <span className="ml-3 text-body text-sage-deep">{state.ok}</span>
         )}
+        {/* The link outlives the form. Closing the panel used to lose it, and
+            a one-time link you have closed the window on is a listing that
+            never goes live. It also shows on the provider's own card below. */}
+        {state.consentUrl && (
+          <div className="max-w-xl">
+            <ConsentLink
+              url={state.consentUrl}
+              phone={state.phone}
+              name={state.name}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -79,9 +93,10 @@ export default function ListForProvider({
       <SectionHeader>Listing on someone&rsquo;s behalf</SectionHeader>
       <Card className="p-5">
         <Note tone="mustard">
-          For the person who cannot or would rather not do it themselves. It goes
-          live straight away — you are the approval step — and they will have no
-          account until they make one, so you manage it for them until then.
+          For the person who cannot or would rather not do it themselves. They
+          will have no account until they make one, so you manage it for them
+          until then — and by default nothing goes live until they have read
+          the agreement and accepted it themselves.
         </Note>
 
         <form action={action} className="mt-4">
@@ -209,28 +224,79 @@ export default function ListForProvider({
             />
           </Field>
 
-          {/* Recorded against the row, with the administrator's own id beside
-              it. An agreement marked accepted with nobody standing behind it
-              is worth less than one never asked for. */}
-          <label className="flex gap-2.5 items-start cursor-pointer mt-2 mb-4">
-            <input
-              type="checkbox" name="terms_confirmed"
-              className="mt-0.5 w-4 h-4 accent-[#c86840] shrink-0"
-            />
-            <span className="text-body">
-              I have read them the provider agreement, or sent it to them, and
-              they agreed to it. This is recorded against their listing with my
-              name on it.
-            </span>
-          </label>
+          {/* Who agrees, and how it is recorded. Two honest answers, and the
+              form makes you pick — because the difference between them is
+              whose name ends up against the agreement. */}
+          <div className="mt-5 pt-4 border-t border-sandstone-soft mb-4">
+            <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-2.5">
+              The agreement
+            </p>
+
+            <label className="flex gap-2.5 items-start cursor-pointer mb-3">
+              <input
+                type="radio" name="consent_how" value="send"
+                checked={how === "send"} onChange={() => setHow("send")}
+                className="mt-1 w-4 h-4 accent-[#c86840] shrink-0"
+              />
+              <span className="text-body">
+                <b>Send it to them to accept.</b>
+                <span className="block text-caption text-charcoal-soft mt-0.5 leading-snug">
+                  Nothing goes live. You get a link to send them on WhatsApp; it
+                  shows them this listing exactly as neighbours will see it,
+                  with the agreement under it. It goes live when they accept,
+                  recorded as theirs — and they can tell you if a detail is
+                  wrong.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex gap-2.5 items-start cursor-pointer">
+              <input
+                type="radio" name="consent_how" value="confirm"
+                checked={how === "confirm"} onChange={() => setHow("confirm")}
+                className="mt-1 w-4 h-4 accent-[#c86840] shrink-0"
+              />
+              <span className="text-body">
+                <b>They already agreed, in front of me.</b>
+                <span className="block text-caption text-charcoal-soft mt-0.5 leading-snug">
+                  Goes live straight away, with the agreement recorded against
+                  your name rather than theirs. For the person sitting beside
+                  you while you type this in.
+                </span>
+              </span>
+            </label>
+
+            {how === "confirm" && (
+              <label className="flex gap-2.5 items-start cursor-pointer mt-3 ml-6">
+                <input
+                  type="checkbox" name="terms_confirmed"
+                  className="mt-0.5 w-4 h-4 accent-[#c86840] shrink-0"
+                />
+                <span className="text-body">
+                  I have read them the provider agreement, or sent it to them,
+                  and they agreed to it. This is recorded against their listing
+                  with my name on it.
+                </span>
+              </label>
+            )}
+          </div>
 
           {state.error && (
             <p className="text-body text-terracotta-deep mb-3">{state.error}</p>
           )}
           {state.ok && <p className="text-body text-sage-deep mb-3">{state.ok}</p>}
+          {state.consentUrl && (
+            <div className="mb-4">
+              <ConsentLink
+                url={state.consentUrl}
+                phone={state.phone}
+                name={state.name}
+              />
+            </div>
+          )}
 
           <div className="flex gap-2">
-            <Submit />
+            <Submit how={how} />
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Never mind
             </Button>

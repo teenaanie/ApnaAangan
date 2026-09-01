@@ -4,7 +4,13 @@
 -- thing a directory can show. Removed 30 August 2026.
 -- ============================================================================
 -- Demo data — invented providers so the directory doesn't look abandoned when
--- you show it to someone. OPTIONAL. Run it, show the app, then delete it.
+-- you show it to someone. OPTIONAL, and OFF BY DEFAULT: running this file seeds
+-- nothing unless you first run, in the same session,
+--
+--     set aangan.seed_demo = 'on';
+--
+-- so that re-running the migration set on a live database cannot repopulate a
+-- directory you have deliberately cleared.
 --
 -- These rows have no auth user attached (user_id is null), so nobody can sign
 -- in as them and RLS can't hand them to anyone. They exist to be looked at.
@@ -37,6 +43,21 @@ declare
   kids uuid; pets  uuid; events uuid; repair uuid;
   p    uuid;  l    uuid;
 begin
+  -- Seeding is OFF unless you ask for it, explicitly, in the same session:
+  --     set aangan.seed_demo = 'on';
+  --
+  -- It used to seed by default and skip only if demo rows already existed.
+  -- That is fine on an empty database and dangerous on a live one: once the
+  -- demo rows have been cleared out of production, re-running the migration
+  -- set — which is a normal thing to do — put all nineteen of them straight
+  -- back, into whichever societies now hold the seeded slugs. On a launched
+  -- directory those are real societies. Changed 1 September 2026, after
+  -- clearing sample data out of production.
+  if current_setting('aangan.seed_demo', true) is distinct from 'on' then
+    raise notice 'Demo data not seeded (set aangan.seed_demo = ''on'' first if you want it).';
+    return;
+  end if;
+
   if exists (select 1 from providers where is_demo) then
     raise notice 'Demo data already present — skipping. To reseed: delete from providers where is_demo;';
     return;

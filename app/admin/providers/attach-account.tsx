@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { attachAccount } from "../actions";
 import { Button, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 /**
  * Handing a listing over to the person it belongs to.
@@ -38,7 +39,7 @@ export default function AttachAccount({ providerId }: { providerId: string }) {
         placeholder="the address they signed up with"
         className={`${inputClass} max-w-[260px]`}
       />
-      <Button type="submit" variant="sage">Hand over</Button>
+      <SubmitButton variant="sage" pendingLabel="Handing over…">Hand over</SubmitButton>
       <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
         Cancel
       </Button>

@@ -120,3 +120,28 @@ export function waProviderFollowUp(a: {
     `If requests are not reaching you properly, tell us and we will sort it out.`
   );
 }
+
+/**
+ * What an administrator sends someone they have drafted a listing for.
+ *
+ * The link is the whole message. It opens their listing as neighbours will see
+ * it, with the agreement under it, and accepting is what puts it live — so the
+ * message has to be honest that nothing has happened yet. "I have listed you"
+ * would be a lie until they tap it.
+ */
+export function waConsentInvite(a: {
+  name: string;
+  what: string;
+  society: string;
+  url: string;
+  from?: string;
+}): string {
+  const who = a.from ? ` This is ${a.from}.` : "";
+  return (
+    `Hello ${a.name}, this is Apna Aangan — the neighbourhood directory for ${a.society}.${who}\n\n` +
+    `You asked to be listed, so I have written your page for you: ${a.what}\n\n` +
+    `Have a look and see if it is right: ${a.url}\n\n` +
+    `It is not live yet. There are the terms to read on that page — what we charge, what we do not do — ` +
+    `and it goes live only when you accept them. If anything is wrong, there is a button to say so and I will fix it.`
+  );
+}

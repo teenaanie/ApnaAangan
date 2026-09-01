@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Button, Note } from "@/components/ui";
 import { MAX_PHOTOS, PHOTO_TYPES, shrink } from "@/lib/images";
-import { Check, Pencil } from "@/components/icons";
+import { Check, Pencil, Spinner } from "@/components/icons";
 
 export type ListingPhoto = {
   id: string;
@@ -150,7 +150,7 @@ export default function Photos({
           disabled={busy || full}
           onClick={() => fileRef.current?.click()}
         >
-          <Pencil size={15} />
+          {busy ? <Spinner size={15} /> : <Pencil size={15} />}
           {busy ? "Uploading…" : live.length === 0 ? "Add photos" : "Add another"}
         </Button>
         <span className="text-caption text-charcoal-faint">

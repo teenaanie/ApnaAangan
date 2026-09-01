@@ -2,16 +2,15 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { addListing, type ActionState } from "../actions";
-import { Button, Card, Field, Note, inputClass } from "@/components/ui";
+import { Card, Field, Note, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_PHOTOS, PHOTO_TYPES, shrink } from "@/lib/images";
 import type { Category } from "@/lib/types";
 
 function Submit() {
-  const { pending } = useFormStatus();
-  return <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add listing"}</Button>;
+  return <SubmitButton pendingLabel="Adding…">Add listing</SubmitButton>;
 }
 
 const EMPTY = {

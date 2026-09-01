@@ -4,8 +4,12 @@ import Nav from "@/components/nav";
 import SettleForm from "./settle-form";
 import ListForProvider from "./list-for";
 import AttachAccount from "./attach-account";
+import MoneyPanel from "./money-panel";
+import ResendConsent from "./resend-consent";
+import SocietyFilter from "./society-filter";
 import { setCreditLimit, setProviderStatus } from "../actions";
-import { Badge, Button, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
+import { Badge, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
 import { getCategories, getLocalities, getProfile, isConfigured } from "@/lib/data";
 import { rupees } from "@/lib/brand";
@@ -26,6 +30,11 @@ type Row = {
   leads_total: number;
   leads_accepted: number;
   is_demo?: boolean;
+  terms_accepted_at?: string | null;
+  consent_sent_at?: string | null;
+  consent_declined_at?: string | null;
+  consent_note?: string | null;
+  listings?: { title: string }[];
   /** Null when an administrator listed them and nobody has claimed it yet. */
   user_id?: string | null;
   localities: { id: string; name: string; area: string | null } | null;
@@ -56,7 +65,8 @@ export default async function AdminProviders({
       .from("providers")
       .select(
         "id, public_id, display_name, status, status_note, is_demo, user_id, " +
-          "localities(id, name, area), provider_contacts(phone)"
+          "terms_accepted_at, consent_sent_at, consent_declined_at, consent_note, " +
+          "localities(id, name, area), provider_contacts(phone), listings(title)"
       )
       .order("display_name"),
     supabase
@@ -128,20 +138,11 @@ export default async function AdminProviders({
           <ListForProvider localities={localities} categories={categories} />
 
           {/* ------------------------------------------------------- filters */}
-          <div className="flex gap-2 overflow-x-auto no-bar pb-4">
-            <FilterChip href="/admin/providers" on={!sp.soc}>
-              All societies
-            </FilterChip>
-            {groups.map(([id, g]) => (
-              <FilterChip
-                key={id}
-                href={`/admin/providers?soc=${id}`}
-                on={sp.soc === id}
-              >
-                {g.name} · {g.rows.length}
-              </FilterChip>
-            ))}
-          </div>
+          <SocietyFilter
+            groups={groups.map(([id, g]) => ({ id, name: g.name, count: g.rows.length }))}
+            value={sp.soc}
+            total={rows.length}
+          />
 
           {shown.length === 0 && <Empty title="Nobody here yet">
               Providers appear under their society as soon as they are approved.
@@ -163,29 +164,6 @@ export default async function AdminProviders({
         </div>
       </Shell>
     </>
-  );
-}
-
-function FilterChip({
-  href,
-  on,
-  children,
-}: {
-  href: string;
-  on: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`shrink-0 whitespace-nowrap text-body font-bold px-3.5 py-2 rounded-full border transition ${
-        on
-          ? "bg-mustard text-white border-mustard"
-          : "bg-surface border-sandstone hover:border-terracotta"
-      }`}
-    >
-      {children}
-    </Link>
   );
 }
 
@@ -216,16 +194,35 @@ function phoneOf(r: Row): string | null {
 
 function ProviderRow({ r }: { r: Row }) {
   const phone = phoneOf(r);
+  /* Drafted, sent, and not yet agreed to. It shares the 'pending' status with
+     a normal sign-up awaiting approval, and the two need different words: one
+     is waiting on you, the other is waiting on them. Nothing you can do to
+     this one moves it along. */
+  const awaitingConsent =
+    !r.terms_accepted_at && !!r.consent_sent_at && r.status === "pending";
   const limit = r.credit_limit_paise ?? 50000;
   const atLimit = r.free_leads_remaining <= 0 && r.balance_paise >= limit;
+  const settleable = r.balance_paise > 0 || r.leads_accepted > 0;
 
   return (
     <Card className="p-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
+      {/* min-w rather than min-w-0 on the details column. With three chips in
+          the actions group — WhatsApp, the number, Suspend — a zero minimum let
+          the details squeeze to nothing on a phone instead of pushing the
+          actions onto their own line: the name ended up underneath the buttons
+          and "1 accepted of 1" wrapped one word per line. A real minimum makes
+          the row wrap where it should. */}
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2.5">
+        <div className="min-w-[220px] flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-bold text-body m-0">{r.display_name}</p>
-            <Badge tone={TONE[r.status] ?? "neutral"}>{LABEL[r.status] ?? r.status}</Badge>
+            <Badge tone={awaitingConsent ? "mustard" : TONE[r.status] ?? "neutral"}>
+              {awaitingConsent
+                ? r.consent_declined_at
+                  ? "They said something is wrong"
+                  : "Waiting for them to accept"
+                : LABEL[r.status] ?? r.status}
+            </Badge>
             {r.is_demo && <Badge>demo</Badge>}
             {atLimit && <Badge tone="mustard">at limit — can&rsquo;t accept</Badge>}
           </div>
@@ -239,10 +236,21 @@ function ProviderRow({ r }: { r: Row }) {
             <p className="text-caption text-mustard mt-1">{r.status_note}</p>
           )}
 
+          {awaitingConsent && (
+            <ResendConsent
+              providerId={r.id}
+              phone={phone}
+              name={r.display_name}
+              what={r.listings?.[0]?.title}
+              society={r.localities?.name}
+              declinedNote={r.consent_note}
+            />
+          )}
+
           {/* No account attached — someone listed them rather than them
               signing up. Everything works, but they cannot manage it
               themselves until it is handed over. */}
-          {!r.user_id && (
+          {!r.user_id && !awaitingConsent && (
             <div className="mt-1.5">
               <Badge tone="mustard">You manage this one</Badge>
               <div className="mt-1 flex flex-wrap items-center gap-3">
@@ -262,7 +270,7 @@ function ProviderRow({ r }: { r: Row }) {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2 shrink-0">
+        <div className="flex flex-wrap items-start gap-2">
           {phone && (
             <>
               <a
@@ -290,44 +298,49 @@ function ProviderRow({ r }: { r: Row }) {
             <form action={setProviderStatus}>
               <input type="hidden" name="id" value={r.id} />
               <input type="hidden" name="status" value="active" />
-              <Button type="submit" variant="sage">Reinstate</Button>
+              <SubmitButton variant="sage">Reinstate</SubmitButton>
             </form>
           ) : r.status === "active" || r.status === "paused" ? (
             <form action={setProviderStatus}>
               <input type="hidden" name="id" value={r.id} />
               <input type="hidden" name="status" value="suspended" />
-              <Button type="submit" variant="danger">Suspend</Button>
+              <SubmitButton variant="danger">Suspend</SubmitButton>
             </form>
           ) : null}
         </div>
       </div>
 
-      {/* Only where money is actually involved — a card with a settlement box
-          on a provider who owes nothing is noise on every row. */}
-      {(r.balance_paise > 0 || r.leads_accepted > 0) && (
-        <SettleForm
-          providerId={r.id}
-          outstandingRupees={Math.round(r.balance_paise / 100)}
-        />
-      )}
-
-      <form action={setCreditLimit} className="mt-2 flex items-end gap-2">
-        <input type="hidden" name="id" value={r.id} />
-        <label className="block">
-          <span className="block text-caption font-bold mb-1 text-charcoal-faint">
-            Credit limit (₹)
-          </span>
-          <input
-            name="limit_rupees"
-            type="number"
-            min="0"
-            step="50"
-            defaultValue={Math.round(limit / 100)}
-            className={`${inputClass} w-[110px] py-1.5`}
+      {/* Both money controls behind one press. The outstanding figure that
+          tells you whether to open this at all is already on the card above.
+          Settlement is offered only where money is actually involved — a
+          payment box on a provider who has never accepted anything is a
+          question about nothing. */}
+      <MoneyPanel label={settleable ? "Payments and credit limit" : "Credit limit"}>
+        {settleable && (
+          <SettleForm
+            providerId={r.id}
+            outstandingRupees={Math.round(r.balance_paise / 100)}
           />
-        </label>
-        <Button type="submit" variant="ghost">Save limit</Button>
-      </form>
+        )}
+
+        <form action={setCreditLimit} className="mt-3 flex items-end gap-2">
+          <input type="hidden" name="id" value={r.id} />
+          <label className="block">
+            <span className="block text-caption font-bold mb-1 text-charcoal-faint">
+              Credit limit (₹)
+            </span>
+            <input
+              name="limit_rupees"
+              type="number"
+              min="0"
+              step="50"
+              defaultValue={Math.round(limit / 100)}
+              className={`${inputClass} w-[110px] py-1.5`}
+            />
+          </label>
+          <SubmitButton variant="ghost">Save limit</SubmitButton>
+        </form>
+      </MoneyPanel>
     </Card>
   );
 }

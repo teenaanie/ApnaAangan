@@ -1,16 +1,15 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { recordSettlement, type SettleState } from "../actions";
-import { Button, inputClass } from "@/components/ui";
+import { inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 function Submit() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant="sage" disabled={pending}>
-      {pending ? "Recording…" : "Record payment"}
-    </Button>
+    <SubmitButton variant="sage" pendingLabel="Recording…">
+      Record payment
+    </SubmitButton>
   );
 }
 
@@ -29,7 +28,9 @@ export default function SettleForm({
   const [state, action] = useActionState<SettleState, FormData>(recordSettlement, {});
 
   return (
-    <form action={action} className="mt-3 pt-3 border-t border-sandstone-soft">
+    // No rule of its own: this now sits inside the folded money panel, which
+    // draws the one line separating it from the provider's details.
+    <form action={action} className="mt-1">
       <input type="hidden" name="provider_id" value={providerId} />
       <div className="flex flex-wrap items-end gap-2">
         <label className="block">

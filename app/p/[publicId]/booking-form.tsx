@@ -1,16 +1,15 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { createBooking, type BookingState } from "./actions";
-import { Button, Field, Note, inputClass } from "@/components/ui";
+import { Field, Note, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 function Submit() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" full disabled={pending}>
-      {pending ? "Sending…" : "Send request"}
-    </Button>
+    <SubmitButton full pendingLabel="Sending…">
+      Send request
+    </SubmitButton>
   );
 }
 

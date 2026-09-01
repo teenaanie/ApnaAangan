@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { createProvider, type ActionState } from "../actions";
-import { Button, Field, Note, SectionHeader, inputClass } from "@/components/ui";
+import { Field, Note, SectionHeader, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { TERMS_PLAIN_SUMMARY, TERMS_VERSION } from "@/lib/terms";
 import type { Category, Locality } from "@/lib/types";
 import SocietyPicker from "./society-picker";
 
 function Submit({ disabled }: { disabled?: boolean }) {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" full disabled={pending || disabled}>
-      {pending ? "Creating…" : "Accept and submit for approval"}
-    </Button>
+    <SubmitButton full disabled={disabled} pendingLabel="Creating…">
+      Accept and submit for approval
+    </SubmitButton>
   );
 }
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { renameSociety, type SocietyState } from "../actions";
 import { Button, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 type Society = {
   id: string;
@@ -14,11 +14,10 @@ type Society = {
 };
 
 function Save() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving…" : "Save"}
-    </Button>
+    <SubmitButton pendingLabel="Saving…">
+      Save
+    </SubmitButton>
   );
 }
 

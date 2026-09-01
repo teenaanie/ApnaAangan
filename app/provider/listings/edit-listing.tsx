@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { archiveListing, updateListing, type ActionState } from "../actions";
 import { Button, Field, Note, inputClass } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import type { Category } from "@/lib/types";
 
 type Listing = {
@@ -26,11 +26,10 @@ type Listing = {
 const NOTE_MAX = 600;
 
 function Save() {
-  const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Saving…" : "Save changes"}
-    </Button>
+    <SubmitButton pendingLabel="Saving…">
+      Save changes
+    </SubmitButton>
   );
 }
 

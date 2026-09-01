@@ -8,7 +8,8 @@ import Photos, { type ListingPhoto } from "./photos";
 import ListingUpdate, { type LiveUpdateRow } from "./listing-update";
 import { photoBase } from "@/lib/site";
 import { setListingPaused } from "../actions";
-import { Badge, Button, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
+import { Badge, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
 import { getPhotosForProvider, getCategories, getManagedProvider, isConfigured } from "@/lib/data";
 
@@ -374,9 +375,9 @@ export default async function ListingsPage({
                         <input type="hidden" name="listing_id" value={l.id} />
                         <input type="hidden" name="paused" value={paused ? "false" : "true"} />
                         {managing && <input type="hidden" name="as" value={provider.id} />}
-                        <Button type="submit" variant={paused ? "sage" : "ghost"}>
+                        <SubmitButton variant={paused ? "sage" : "ghost"}>
                           {paused ? "Resume this listing" : "Pause this one"}
-                        </Button>
+                        </SubmitButton>
                         <span className="text-caption text-charcoal-faint flex-1 min-w-[180px]">
                           {paused
                             ? "Nobody can see or request this. Your other listings are unaffected."

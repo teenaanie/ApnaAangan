@@ -236,6 +236,22 @@ export const LogOut = (p: IconProps) => (
   </Svg>
 );
 
+/**
+ * The one icon in the set that moves.
+ *
+ * Same 24 grid, same 1.7 stroke, same currentColor as every other icon here —
+ * a ring with a quarter of it left bright, turning. It exists because a button
+ * that has been pressed and looks exactly like a button that has not been
+ * pressed is the most common way an app feels broken, and the most common way
+ * a person ends up submitting the same thing twice.
+ */
+export const Spinner = ({ size = 16, className = "", label }: IconProps) => (
+  <Svg size={size} className={`animate-spin ${className}`} label={label}>
+    <circle cx="12" cy="12" r="9" opacity="0.3" />
+    <path d="M21 12a9 9 0 0 0-9-9" />
+  </Svg>
+);
+
 export const Link = (p: IconProps) => (
   <Svg {...p}>
     <path d="M10 13.6a3.8 3.8 0 0 0 5.6.4l2.8-2.8a3.8 3.8 0 0 0-5.4-5.4l-1.5 1.5" />
