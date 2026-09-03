@@ -6,6 +6,7 @@ import ListForProvider from "./list-for";
 import AttachAccount from "./attach-account";
 import MoneyPanel from "./money-panel";
 import ResendConsent from "./resend-consent";
+import EditProvider from "./edit-provider";
 import SocietyFilter from "./society-filter";
 import { setCreditLimit, setProviderStatus } from "../actions";
 import { Badge, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
@@ -13,6 +14,7 @@ import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
 import { getCategories, getLocalities, getProfile, isConfigured } from "@/lib/data";
 import { rupees } from "@/lib/brand";
+import type { Locality } from "@/lib/types";
 import { waLink } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,7 @@ type Row = {
   display_name: string;
   status: string;
   status_note: string | null;
+  about: string | null;
   balance_paise: number;
   credit_limit_paise: number | null;
   free_leads_remaining: number;
@@ -64,7 +67,7 @@ export default async function AdminProviders({
     supabase
       .from("providers")
       .select(
-        "id, public_id, display_name, status, status_note, is_demo, user_id, " +
+        "id, public_id, display_name, about, status, status_note, is_demo, user_id, " +
           "terms_accepted_at, consent_sent_at, consent_declined_at, consent_note, " +
           "localities(id, name, area), provider_contacts(phone), listings(title)"
       )
@@ -156,7 +159,7 @@ export default async function AdminProviders({
               </SectionHeader>
               <div className="grid gap-3">
                 {g.rows.map((r) => (
-                  <ProviderRow key={r.id} r={r} />
+                  <ProviderRow key={r.id} r={r} localities={localities} />
                 ))}
               </div>
             </section>
@@ -192,7 +195,7 @@ function phoneOf(r: Row): string | null {
   return row?.phone ?? null;
 }
 
-function ProviderRow({ r }: { r: Row }) {
+function ProviderRow({ r, localities }: { r: Row; localities: Locality[] }) {
   const phone = phoneOf(r);
   /* Drafted, sent, and not yet agreed to. It shares the 'pending' status with
      a normal sign-up awaiting approval, and the two need different words: one
@@ -235,6 +238,18 @@ function ProviderRow({ r }: { r: Row }) {
           {r.status_note && (
             <p className="text-caption text-mustard mt-1">{r.status_note}</p>
           )}
+
+          {/* Name, description, society, number. The listings have been
+              editable since 0031; the person had not been, so a change of
+              name meant hand-written SQL. See migration 0035. */}
+          <EditProvider
+            providerId={r.id}
+            displayName={r.display_name}
+            about={r.about}
+            localityId={r.localities?.id ?? null}
+            phone={phone}
+            localities={localities}
+          />
 
           {awaitingConsent && (
             <ResendConsent

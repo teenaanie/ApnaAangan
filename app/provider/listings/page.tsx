@@ -7,7 +7,7 @@ import Availability from "../availability";
 import Photos, { type ListingPhoto } from "./photos";
 import ListingUpdate, { type LiveUpdateRow } from "./listing-update";
 import { photoBase } from "@/lib/site";
-import { setListingPaused } from "../actions";
+import { setContactMode, setListingPaused } from "../actions";
 import { Badge, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { SubmitButton } from "@/components/submit";
 import { createClient } from "@/lib/supabase/server";
@@ -42,7 +42,7 @@ type Row = {
  * and a provider does not care which layer it is. They care whether anyone can
  * find them. So each card states the outcome first and the reason second.
  */
-function visibility(l: Row, providerStatus: string) {
+function visibility(l: Row, providerStatus: string, awaitingConsent = false) {
   if (providerStatus === "paused")
     return { live: false, label: "Hidden", why: "Everything is paused" };
   if (providerStatus === "closed")
@@ -50,7 +50,9 @@ function visibility(l: Row, providerStatus: string) {
   if (providerStatus === "suspended")
     return { live: false, label: "Hidden", why: "Suspended" };
   if (providerStatus === "pending")
-    return { live: false, label: "Not yet live", why: "Awaiting approval" };
+    return awaitingConsent
+      ? { live: false, label: "Not yet live", why: "Waiting for them to accept" }
+      : { live: false, label: "Not yet live", why: "Awaiting approval" };
   if (l.paused_at) return { live: false, label: "Paused", why: "You paused this one" };
   if (!l.is_active) return { live: false, label: "Hidden", why: "Archived" };
   if (l.status === "rejected")
@@ -132,7 +134,12 @@ export default async function ListingsPage({
   const all = (rows ?? []) as unknown as Row[];
   const listings = all.filter((l) => l.is_active);
   const archived = all.filter((l) => !l.is_active);
-  const liveCount = listings.filter((l) => visibility(l, provider.status).live).length;
+  /* Drafted by an administrator and still waiting on the lister to accept the
+     agreement (migration 0033). A normal sign-up accepts at the moment they
+     create the account, so a pending provider with nothing accepted can only
+     be a held draft. Declared before liveCount, which reads it. */
+  const awaitingConsent = provider.status === "pending" && !provider.terms_accepted_at;
+  const liveCount = listings.filter((l) => visibility(l, provider.status, awaitingConsent).live).length;
   const accountOff = ["paused", "closed", "suspended"].includes(provider.status);
 
   return (
@@ -149,9 +156,29 @@ export default async function ListingsPage({
           {managing && (
             <div className="mb-5">
               <Note tone="mustard">
-                <b>You are managing {provider.display_name}&rsquo;s listings.</b>{" "}
-                Anything you change here is theirs, and shows on their page as
-                if they had done it.{" "}
+                {/* A listing still waiting on its lister is a different job
+                    from managing a live one, and saying "shows on their page"
+                    about something no neighbour can see would send an
+                    administrator looking for a page that is not there. This is
+                    the screen they arrive at from "Fix their listing" after a
+                    lister said something was wrong. */}
+                {awaitingConsent ? (
+                  <>
+                    <b>
+                      {provider.display_name} has not accepted the agreement
+                      yet, so none of this is live.
+                    </b>{" "}
+                    Fix whatever they told you was wrong — editing here leaves
+                    it held — then send them a new link from the providers
+                    screen.{" "}
+                  </>
+                ) : (
+                  <>
+                    <b>You are managing {provider.display_name}&rsquo;s listings.</b>{" "}
+                    Anything you change here is theirs, and shows on their page
+                    as if they had done it.{" "}
+                  </>
+                )}
                 <Link href="/admin/providers" className="underline font-bold">
                   Back to providers
                 </Link>
@@ -218,7 +245,7 @@ export default async function ListingsPage({
                gap does as much of the separating as the border does. */
             <div className="grid gap-7 mb-9">
               {listings.map((l) => {
-                const v = visibility(l, provider.status);
+                const v = visibility(l, provider.status, awaitingConsent);
                 const paused = Boolean(l.paused_at);
                 // Pausing one listing is meaningless while everything is off,
                 // and rejected or unapproved listings are not the provider's
@@ -426,6 +453,37 @@ export default async function ListingsPage({
                 This one is about you rather than about a single listing, so it
                 shows above everything on your page.
               </p>
+            </Card>
+
+            {/* How requests reach them. Sits with the other account-wide
+                controls rather than on a listing, because it is about the
+                person: it applies to everything they offer. */}
+            <Card className="p-4 mb-3">
+              <form action={setContactMode} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                {managing && <input type="hidden" name="as" value={provider.id} />}
+                <input
+                  type="hidden"
+                  name="mode"
+                  value={provider.contact_mode === "direct" ? "queue" : "direct"}
+                />
+                <div className="min-w-[220px] flex-1">
+                  <p className="text-body font-bold m-0">
+                    {provider.contact_mode === "direct"
+                      ? "Neighbours message you on WhatsApp"
+                      : "Requests wait for you to accept"}
+                  </p>
+                  <p className="text-caption text-charcoal-soft m-0 mt-0.5 leading-snug">
+                    {provider.contact_mode === "direct"
+                      ? "Your listing shows a WhatsApp button with your message ready written. Your number is in that link, so anyone who opens your page can see it — that is the trade. Nothing is charged for these."
+                      : "A neighbour sends a request, you accept or decline, and only then does either of you get the other's number. Switching to WhatsApp makes your number visible on your page."}
+                  </p>
+                </div>
+                <SubmitButton variant="ghost">
+                  {provider.contact_mode === "direct"
+                    ? "Go back to requests"
+                    : "Let them WhatsApp me"}
+                </SubmitButton>
+              </form>
             </Card>
 
             <Availability

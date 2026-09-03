@@ -145,3 +145,32 @@ export function waConsentInvite(a: {
     `and it goes live only when you accept them. If anything is wrong, there is a button to say so and I will fix it.`
   );
 }
+
+/**
+ * What a resident sends a provider who takes messages directly.
+ *
+ * Written for them, because the alternative is an empty WhatsApp box and
+ * "hi" — which tells the lister nothing and starts four messages of
+ * back-and-forth before anyone knows what is wanted. Everything they already
+ * typed into the form goes in, in the order a person would say it.
+ *
+ * It names Aangan in the first line. A number appearing out of nowhere on
+ * WhatsApp is a stranger; a number that says where it found you is a customer.
+ */
+export function waResidentIntro(a: {
+  providerName: string;
+  residentName: string;
+  listing: string | null;
+  message: string;
+  when: string | null;
+  flat: string | null;
+}): string {
+  const about = a.listing ? ` about your ${a.listing}` : "";
+  const when = a.when ? `\n\nWhen: ${a.when}` : "";
+  const where = a.flat ? `\nI am in ${a.flat}.` : "";
+  return (
+    `Hello ${a.providerName}, I found you on Apna Aangan${about}.\n\n` +
+    `${a.message}${when}${where}\n\n` +
+    `— ${a.residentName}`
+  );
+}

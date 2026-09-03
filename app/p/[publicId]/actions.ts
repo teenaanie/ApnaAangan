@@ -7,8 +7,13 @@ import { leadEmail, sendMail } from "@/lib/email";
 import { rupees } from "@/lib/brand";
 import { resolvedSiteUrl } from "@/lib/site";
 import { getBillingEnabled } from "@/lib/data";
+import { waLink, waResidentIntro } from "@/lib/whatsapp";
 
 export type BookingState = { error?: string };
+
+/** The direct path hands back a link rather than redirecting: the browser has
+    to be the thing that opens WhatsApp. */
+export type DirectState = { error?: string; waUrl?: string; ref?: string };
 
 /**
  * Creates a booking request. No account required — asking a neighbour for a
@@ -90,4 +95,78 @@ export async function createBooking(
 
   revalidatePath(`/p/${publicId}`);
   redirect(`/p/${publicId}?sent=${ref}`);
+}
+
+
+/**
+ * The direct path: the resident messages the provider on WhatsApp themselves.
+ *
+ * For providers who have switched `contact_mode` to 'direct' — the listers who
+ * live on WhatsApp and for whom "open a website and press Accept" is the step
+ * that loses them the customer. See migration 0036.
+ *
+ * Two things happen, in this order, and the order matters. The record is
+ * written FIRST, by the database function, which is also where the provider's
+ * number comes from — the number is never in the page, only in the answer to a
+ * request that passed every check. Then the browser is handed a wa.me link.
+ *
+ * Nothing is charged. That is decided in the database, not here.
+ *
+ * What this records is honest about itself: somebody opened WhatsApp. Whether
+ * they pressed send is not knowable from our side, and the admin screen says
+ * so rather than counting it as a delivered enquiry.
+ */
+export async function openWhatsApp(
+  _prev: DirectState,
+  formData: FormData
+): Promise<DirectState> {
+  const publicId = String(formData.get("public_id") || "");
+  const message = String(formData.get("message") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const name = String(formData.get("name") || "").trim();
+  const flat = String(formData.get("flat") || "").trim();
+  const listingId = String(formData.get("listing_id") || "") || null;
+  const when = String(formData.get("when") || "").trim();
+  const listingTitle = String(formData.get("listing_title") || "").trim();
+
+  if (message.length < 3) return { error: "Tell them what you're looking for." };
+  if (phone.replace(/\D/g, "").length < 10)
+    return { error: "A 10-digit phone number, please." };
+  if (!name) return { error: "Add your name so they know who's asking." };
+
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase.rpc("request_direct_contact", {
+    p_public_id: publicId,
+    p_listing_id: listingId,
+    p_name: name,
+    p_phone: phone,
+    p_flat: flat || null,
+    p_message: message,
+    p_when: when || null,
+  });
+  if (error) return { error: error.message };
+
+  const res = result as {
+    ok: boolean; error?: string; ref?: string;
+    phone?: string; display_name?: string;
+  };
+  if (!res?.ok || !res.phone)
+    return { error: res?.error ?? "Could not open that right now." };
+
+  revalidatePath(`/p/${publicId}`);
+  return {
+    ref: res.ref,
+    waUrl: waLink(
+      res.phone,
+      waResidentIntro({
+        providerName: res.display_name ?? "there",
+        residentName: name,
+        listing: listingTitle || null,
+        message,
+        when: when || null,
+        flat: flat || null,
+      })
+    ),
+  };
 }

@@ -45,6 +45,12 @@ export type Provider = {
   status_note: string | null;
   leads_total: number;
   leads_accepted: number;
+  /** Null while an administrator has drafted this and the lister has not
+      accepted the agreement yet. See migration 0033. */
+  terms_accepted_at?: string | null;
+  /** "queue" (default) or "direct" — the provider chose to be messaged on
+      WhatsApp straight away. See migration 0036. */
+  contact_mode?: "queue" | "direct";
 };
 
 /** A provider as a resident may see them: everything except the counting.

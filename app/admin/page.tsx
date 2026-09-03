@@ -26,7 +26,7 @@ export default async function AdminPage() {
     // The listings come along so the one decision is an informed one — you are
     // approving a person AND what they propose to sell, in a single look.
     supabase.from("providers")
-      .select("id, public_id, display_name, about, status, created_at, listings(id, title, description, status), provider_contacts(phone)")
+      .select("id, public_id, display_name, about, status, created_at, localities(name, area), listings(id, title, description, status), provider_contacts(phone)")
       // A listing drafted by an administrator and waiting on the LISTER is
       // also 'pending', and must not appear here. Approving it would put it
       // live carrying an agreement nobody has read — which is the one thing
@@ -38,12 +38,12 @@ export default async function AdminPage() {
     // (see moderateProvider); this section is for listings added later, by
     // someone already in the directory.
     supabase.from("listings")
-      .select("id, title, description, status, first_approved_at, edited_at, prev_title, prev_description, providers!inner(public_id, display_name, status, provider_contacts(phone))")
+      .select("id, title, description, status, first_approved_at, edited_at, prev_title, prev_description, providers!inner(public_id, display_name, status, localities(name, area), provider_contacts(phone))")
       .eq("status", "pending").in("providers.status", ["active", "paused"])
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
       .eq("status", "pending").order("created_at").limit(30),
-    supabase.from("leads").select("ref, message, status, charge_paise, created_at, resident_name, resident_phone, is_guest, providers(public_id, display_name, provider_contacts(phone))")
+    supabase.from("leads").select("ref, message, status, charge_paise, created_at, channel, resident_name, resident_phone, is_guest, providers(public_id, display_name, provider_contacts(phone))")
       .order("created_at", { ascending: false }).limit(15),
     supabase.from("providers").select("status"),
   ]);
@@ -158,6 +158,7 @@ export default async function AdminPage() {
 
   const pendingProviders = (providersRes.data ?? []) as unknown as Array<{
     id: string; public_id: string; display_name: string; about: string | null;
+    localities: { name: string; area: string | null } | null;
     listings: Array<{ id: string; title: string; description: string | null; status: string }> | null;
     provider_contacts: { phone: string }[] | { phone: string } | null;
   }>;
@@ -167,6 +168,7 @@ export default async function AdminPage() {
     prev_title: string | null; prev_description: string | null;
     providers: {
       public_id: string; display_name: string;
+      localities: { name: string; area: string | null } | null;
       provider_contacts: { phone: string }[] | { phone: string } | null;
     } | null;
   }>;
@@ -176,6 +178,7 @@ export default async function AdminPage() {
   }>;
   const recentLeads = (leadsRes.data ?? []) as unknown as Array<{
     ref: string; message: string; status: string; charge_paise: number;
+    channel?: string;
     resident_name: string; resident_phone: string; is_guest: boolean;
     providers: {
       public_id: string; display_name: string;
@@ -416,7 +419,13 @@ export default async function AdminPage() {
               {pendingProviders.map((p) => (
                 <Card key={p.id} className="p-4 flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-body m-0">{p.display_name}</p>
+                    {/* Which society this is for. Approving is partly a
+                        question of "do I recognise this name in that building",
+                        and the queue was not saying which building. */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-body m-0">{p.display_name}</p>
+                      <Badge>{societyOf(p.localities)}</Badge>
+                    </div>
                     <p className="text-caption text-charcoal-faint font-mono mt-0.5">{p.public_id}</p>
                     {p.about && (
                       <p className="text-body text-charcoal-soft mt-1.5">{p.about}</p>
@@ -492,7 +501,8 @@ export default async function AdminPage() {
                       <p className="font-bold text-body m-0">{l.title}</p>
                     </div>
                     <p className="text-caption text-charcoal-faint mt-0.5">
-                      {l.providers?.display_name} · {l.providers?.public_id}
+                      {l.providers?.display_name} · {l.providers?.public_id} ·{" "}
+                      {societyOf(l.providers?.localities)}
                       {l.first_approved_at && (
                         <> · live since {monthYear(l.first_approved_at)}, off the
                         directory until you decide</>
@@ -804,8 +814,17 @@ export default async function AdminPage() {
                       {l.resident_phone ? ` · ${l.resident_phone}` : ""}: “{l.message}”
                     </p>
                   </div>
+                  {/* A direct one never reached the accept/decline flow, so
+                      the nudge below would be nonsense and the status is not
+                      the provider's answer. Say exactly what is known: this
+                      resident opened WhatsApp. Whether they pressed send is
+                      not visible from here, and claiming otherwise would make
+                      the number worse than useless. */}
+                  {l.channel === "direct" && (
+                    <Badge tone="sage">Opened WhatsApp</Badge>
+                  )}
                   {l.is_guest && <Badge>guest</Badge>}
-                  {l.status === "new" && providerPhone(l.providers) && (
+                  {l.channel !== "direct" && l.status === "new" && providerPhone(l.providers) && (
                     <a
                       href={waLink(
                         providerPhone(l.providers)!,
@@ -825,14 +844,27 @@ export default async function AdminPage() {
                       Nudge
                     </a>
                   )}
-                  <Badge tone={l.status === "accepted" ? "sage" : l.status === "new" ? "mustard" : "neutral"}>
-                    {l.status}
-                  </Badge>
+                  {/* A direct row is stored as 'accepted' because from the
+                      resident's side it is — nobody has to say yes. Showing
+                      that word beside it would read as the provider having
+                      answered, which is the one thing it does not mean. */}
+                  {l.channel !== "direct" && (
+                    <Badge tone={l.status === "accepted" ? "sage" : l.status === "new" ? "mustard" : "neutral"}>
+                      {l.status}
+                    </Badge>
+                  )}
                   {l.charge_paise > 0 && (
                     <span className="text-caption text-charcoal-faint">{rupees(l.charge_paise)}</span>
                   )}
                 </div>
               ))}
+              <p className="text-caption text-charcoal-faint px-3 py-2.5 m-0 leading-snug">
+                <b>Opened WhatsApp</b> means the neighbour tapped through to a
+                lister who takes messages directly. It records that they got as
+                far as the chat, not that they pressed send, and nothing is
+                charged for one. If a lister says nobody is contacting them,
+                these rows are where to look first.
+              </p>
             </Card>
           )}
         </div>
@@ -873,6 +905,12 @@ function RejectedCard({
 }
 
 /** Supabase returns an embedded one-to-many as an array; tolerate both shapes. */
+/** "Cloud 9 Bunglows · Mohammadwadi", or an honest blank. */
+function societyOf(l: { name: string; area: string | null } | null | undefined): string {
+  if (!l?.name) return "No society set";
+  return l.area ? `${l.name} · ${l.area}` : l.name;
+}
+
 function providerPhone(
   p: { provider_contacts: { phone: string }[] | { phone: string } | null } | null
 ): string | null {

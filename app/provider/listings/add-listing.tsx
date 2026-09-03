@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { addListing, type ActionState } from "../actions";
 import { Card, Field, Note, inputClass } from "@/components/ui";
 import { SubmitButton } from "@/components/submit";
+import SuggestListing from "@/components/suggest-listing";
 import { createClient } from "@/lib/supabase/client";
 import { MAX_PHOTOS, PHOTO_TYPES, shrink } from "@/lib/images";
 import type { Category } from "@/lib/types";
@@ -136,6 +137,24 @@ export default function AddListing({
           sort it out.
         </p>
       )}
+      {/* Offered before the form, not inside it: a form nested in a form is
+          invalid HTML and one of them gets silently dropped. It fills the
+          fields below, which are controlled state here, so what it writes is
+          immediately editable rather than being a separate draft. */}
+      <SuggestListing
+        categories={categories}
+        asProvider={asProvider}
+        onApply={(d) =>
+          setV((prev) => ({
+            ...prev,
+            title: d.title || prev.title,
+            description: d.description || prev.description,
+            keywords: d.keywords || prev.keywords,
+            category_id: d.categoryId || prev.category_id,
+          }))
+        }
+      />
+
       <form action={action}>
         {asProvider && <input type="hidden" name="as" value={asProvider} />}
 

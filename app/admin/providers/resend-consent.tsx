@@ -1,22 +1,31 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { issueConsentLink, type ListForState } from "../actions";
 import ConsentLink from "./consent-link";
 import { SubmitButton } from "@/components/submit";
+import { Pencil } from "@/components/icons";
 
 /**
- * "Send them the link again."
+ * Everything you can do about a listing that is waiting on its lister.
  *
- * The link is shown once, at the moment the listing is drafted, and that is
- * the moment most likely to be interrupted — a phone call, a closed tab, a
- * number typed wrong. Without this the only way back would be to delete the
- * listing and re-enter all of it.
+ * Two things, and until 1 September there was only one. The link could be
+ * re-sent, but when somebody replied "the price is wrong" there was nowhere to
+ * go and fix it — the card showed you the complaint and then offered you
+ * nothing to do about it. Which made declining a dead end, and declining is
+ * the outcome this flow was built to make easy.
  *
- * Issuing a new one retires the old, so a link that went to the wrong number
- * stops working as soon as this is pressed. The database refuses it outright
- * for anyone who has already accepted, so it can never re-open a listing whose
- * owner has agreed to it.
+ * So: edit first, then re-send. Editing goes to the ordinary listings screen
+ * in "acting as them" mode, where every control already works — title, price,
+ * photos, another listing. A held listing edited there STAYS held: the
+ * moderation re-queue in update_my_listing only fires on a listing that was
+ * already approved, so a pending one comes back pending. Nothing can slip live
+ * through the side door.
+ *
+ * Re-sending issues a fresh token, which retires the old one and clears the
+ * decline — so after a fix the lister opens a clean page rather than one still
+ * carrying their own complaint.
  */
 export default function ResendConsent({
   providerId,
@@ -37,6 +46,7 @@ export default function ResendConsent({
     issueConsentLink,
     {}
   );
+  const declined = !!declinedNote;
 
   return (
     <div className="mt-2">
@@ -57,18 +67,37 @@ export default function ResendConsent({
           society={society}
         />
       ) : (
-        <form action={action}>
-          <input type="hidden" name="provider_id" value={providerId} />
-          <input type="hidden" name="phone" value={phone ?? ""} />
-          <SubmitButton variant="ghost" pendingLabel="Making a link…">
-            Send them the link again
-          </SubmitButton>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* The missing half. Same screen as any other listing you manage. */}
+          <Link
+            href={`/provider/listings?as=${providerId}`}
+            className="inline-flex items-center gap-1.5 text-body font-bold text-terracotta-deep hover:underline underline-offset-2"
+          >
+            <Pencil size={15} />
+            {declined ? "Fix their listing" : "Edit their listing"}
+          </Link>
+
+          <form action={action}>
+            <input type="hidden" name="provider_id" value={providerId} />
+            <input type="hidden" name="phone" value={phone ?? ""} />
+            <SubmitButton variant="ghost" pendingLabel="Making a link…">
+              {declined ? "Send a new link" : "Send them the link again"}
+            </SubmitButton>
+          </form>
+
+          {declined && (
+            <span className="text-caption text-charcoal-faint leading-snug flex-1 min-w-[200px]">
+              Fix it first — sending a new link clears what they told you, and
+              retires the old one.
+            </span>
+          )}
+
           {state.error && (
-            <p className="text-caption text-terracotta-deep mt-1.5 mb-0">
+            <p className="text-caption text-terracotta-deep m-0 w-full">
               {state.error}
             </p>
           )}
-        </form>
+        </div>
       )}
     </div>
   );

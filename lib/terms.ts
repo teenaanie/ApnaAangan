@@ -18,9 +18,9 @@
  * a provider agreed to. It is stored on the provider row at acceptance, so you
  * can always tell which wording someone signed up under.
  */
-export const TERMS_VERSION = "2026-08-v1";
+export const TERMS_VERSION = "2026-09-v1";
 
-export const TERMS_EFFECTIVE = "19 August 2026";
+export const TERMS_EFFECTIVE = "1 September 2026";
 
 export type Clause = { n: string; title: string; body: string[] };
 
@@ -43,7 +43,8 @@ export const TERMS: Clause[] = [
     body: [
       "You will give accurate details of what you offer, your pricing, and your availability, and you will keep them current. A listing that is months out of date wastes a neighbour's time and reflects on everyone here.",
       "New listings, and changes to existing ones, are reviewed before they appear. This normally takes a day or less.",
-      "Your phone number is never published on your listing. It is stored separately and is not readable by residents browsing the directory.",
+      "Your phone number is not published on your listing. It is stored separately and is not readable by residents browsing the directory.",
+      "There is one exception, and only if you switch it on yourself: direct messages. If you turn that on, your listing shows a button that opens WhatsApp addressed to you, and your number is in that link — which means anyone who opens your page can read it. It is off unless you choose it, you can turn it off again at any time, and nothing is charged for a request that arrives this way.",
     ],
   },
   {

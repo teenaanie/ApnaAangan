@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { listForProvider, type ListForState } from "../actions";
 import { Button, Card, Field, Note, SectionHeader, inputClass } from "@/components/ui";
 import ConsentLink from "./consent-link";
+import SuggestListing from "@/components/suggest-listing";
 import { SubmitButton } from "@/components/submit";
 import type { Category, Locality } from "@/lib/types";
 
@@ -98,6 +99,24 @@ export default function ListForProvider({
           until then — and by default nothing goes live until they have read
           the agreement and accepted it themselves.
         </Note>
+
+        {/* The same drafting help the lister gets, for the case it was built
+            for: somebody on the phone describing what they make while you type.
+            Outside the form — a form inside a form is invalid HTML. */}
+        <div className="mt-4">
+          <SuggestListing
+            categories={categories}
+            onApply={(d) =>
+              setV((prev) => ({
+                ...prev,
+                title: d.title || prev.title,
+                description: d.description || prev.description,
+                keywords: d.keywords || prev.keywords,
+                category_id: d.categoryId || prev.category_id,
+              }))
+            }
+          />
+        </div>
 
         <form action={action} className="mt-4">
           <Field label="What should neighbours call them?">

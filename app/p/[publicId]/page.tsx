@@ -317,6 +317,7 @@ export default async function ProviderPage({
                   listings={listings.map((l) => ({ id: l.id, title: l.title }))}
                   listingId={focus?.id}
                   providerName={provider.display_name}
+                  direct={provider.contact_mode === "direct"}
                 />
               )}
             </Card>

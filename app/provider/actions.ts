@@ -468,3 +468,42 @@ export async function claimListing(
   revalidatePath("/provider");
   redirect("/provider?claimed=1");
 }
+
+
+/**
+ * The provider decides how they want to be reached.
+ *
+ * 'direct' puts a WhatsApp button on their listing with their number inside
+ * the link — which means anyone who opens the page can read it. That is the
+ * whole trade and the form says it in those words; there is no version of this
+ * where the number is both usable and hidden.
+ *
+ * The database refuses to switch it on for a provider with no number stored
+ * (see migration 0036), so the failure case is an error rather than a button
+ * that opens an empty chat.
+ */
+export async function setContactMode(formData: FormData) {
+  const mode = String(formData.get("mode") || "");
+  if (!["queue", "direct"].includes(mode)) return;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login?next=/provider/listings");
+
+  const providerId = await actingProviderId(
+    supabase, user.id, String(formData.get("as") || "") || null
+  );
+  if (!providerId) return;
+
+  const { error } = await supabase
+    .from("providers")
+    .update({ contact_mode: mode })
+    .eq("id", providerId);
+
+  const as = String(formData.get("as") || "");
+  const back = as ? `/provider/listings?as=${as}` : "/provider/listings";
+  revalidatePath(back);
+  revalidatePath("/");
+  if (error) redirect(`${back}?err=${encodeURIComponent(error.message)}`);
+  redirect(back);
+}

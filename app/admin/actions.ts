@@ -578,3 +578,39 @@ function parseKeywordList(raw: string): string[] {
     )
   ).slice(0, 12);
 }
+
+
+/**
+ * Correct a provider's own details.
+ *
+ * Their listings have been editable by an administrator since 0031; the person
+ * had not been, so "please change my name" or "I have a new number" meant
+ * writing SQL by hand. See migration 0035.
+ *
+ * The claim email is deliberately not on this form. It is not readable through
+ * the API by anyone — 0033 asserts that — so a form could only ever overwrite
+ * it blind, and handing a listing to an account already has its own screen.
+ */
+export async function updateProviderDetails(
+  _prev: ListForState,
+  formData: FormData
+): Promise<ListForState> {
+  const supabase = await assertAdmin();
+
+  const { data, error } = await supabase.rpc("admin_update_provider", {
+    p_provider_id: String(formData.get("provider_id") || ""),
+    p_display_name: String(formData.get("display_name") || "").trim(),
+    p_about: String(formData.get("about") || "").trim() || null,
+    p_locality_id: String(formData.get("locality_id") || "") || null,
+    p_phone: String(formData.get("phone") || "").trim() || null,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as { ok: boolean; error?: string };
+  if (!res?.ok) return { error: res?.error ?? "Could not save that." };
+
+  revalidatePath("/admin/providers");
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { ok: "Saved." };
+}

@@ -45,7 +45,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
  */
 const PROVIDER_PUBLIC_COLS =
   "id, user_id, public_id, display_name, about, locality_id, status, " +
-  "verified_id, created_at, is_demo, status_note, " +
+  "verified_id, created_at, is_demo, status_note, terms_accepted_at, contact_mode, " +
   "additional_info, additional_info_pending, additional_info_at";
 
 /** The provider record owned by the signed-in user, with their own numbers. */
