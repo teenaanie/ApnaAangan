@@ -20,7 +20,13 @@ const POSTER_TYPES = /^image\/(jpeg|png|webp)$/;
 const POSTER_MAX_BYTES = 3 * 1024 * 1024;
 
 /**
- * Turn a few words into a draft listing.
+ * Turn a few words, or a poster, into a draft listing.
+ *
+ * Called directly rather than through a form action. It used to be a form
+ * action, which meant a nested <form> — invalid HTML, and it kept this panel
+ * out of the one screen where it is needed most: the sign-up page, where the
+ * whole thing is already one form and somebody is writing their first listing
+ * with nothing to copy from.
  *
  * The order here is the point. The reservation happens in the database FIRST —
  * it checks the rate limit and writes the attempt down — and only then is the
@@ -31,12 +37,15 @@ const POSTER_MAX_BYTES = 3 * 1024 * 1024;
  * Nothing is saved to a listing. This returns fields for a form, and a person
  * reads them and presses a button.
  */
-export async function suggestListing(
-  _prev: SuggestState,
-  formData: FormData
-): Promise<SuggestState> {
-  const what = String(formData.get("what") || "").trim();
-  const asProvider = String(formData.get("as") || "") || null;
+export async function suggestListing(input: {
+  what: string;
+  /** A poster, already shrunk in the browser. */
+  poster: File | null;
+  /** Set when an administrator is writing on somebody else's behalf. */
+  asProvider: string | null;
+}): Promise<SuggestState> {
+  const what = (input.what || "").trim();
+  const asProvider = input.asProvider || null;
 
   /* The poster, if they sent one.
    *
@@ -45,9 +54,7 @@ export async function suggestListing(
    * day. Asking them to retype it into a form is the friction this whole panel
    * exists to remove, so reading it is the shortest path from "I want to be
    * listed" to a listing. */
-  const upload = formData.get("poster");
-  const file =
-    upload instanceof File && upload.size > 0 ? upload : null;
+  const file = input.poster && input.poster.size > 0 ? input.poster : null;
 
   if (file) {
     if (!POSTER_TYPES.test(file.type))

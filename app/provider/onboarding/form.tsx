@@ -8,6 +8,7 @@ import { SubmitButton } from "@/components/submit";
 import { TERMS_PLAIN_SUMMARY, TERMS_VERSION } from "@/lib/terms";
 import type { Category, Locality } from "@/lib/types";
 import SocietyPicker from "./society-picker";
+import SuggestListing from "@/components/suggest-listing";
 
 function Submit({ disabled }: { disabled?: boolean }) {
   return (
@@ -27,6 +28,19 @@ export default function OnboardingForm({
   const [state, action] = useActionState<ActionState, FormData>(createProvider, {});
   const [phone, setPhone] = useState("");
   const [accepted, setAccepted] = useState(false);
+
+  /* The three fields the drafting panel can fill. Controlled only so that it
+     has somewhere to put what it writes — everything else on this form stays
+     uncontrolled, because nothing else needs to be. */
+  const [listing, setListing] = useState({
+    title: "",
+    category_id: "",
+    description: "",
+  });
+  const setField =
+    (k: keyof typeof listing) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setListing((prev) => ({ ...prev, [k]: e.target.value }));
 
   return (
     <form action={action}>
@@ -70,14 +84,42 @@ export default function OnboardingForm({
         <SectionHeader>Your first listing</SectionHeader>
       </div>
 
+      {/* Offered here rather than only on the Add another screen, because this
+          is the listing that decides whether somebody finishes signing up.
+          They are looking at an empty box, they have never written anything
+          like this before, and half of them have a poster on their phone that
+          already says it. */}
+      <SuggestListing
+        categories={categories}
+        onApply={(d) =>
+          setListing((prev) => ({
+            title: d.title || prev.title,
+            description: d.description || prev.description,
+            category_id: d.categoryId || prev.category_id,
+          }))
+        }
+      />
+
       <Field label="What do you offer?">
-        <input name="title" required className={inputClass} placeholder="Home-baked eggless cakes" />
+        <input
+          name="title"
+          required
+          value={listing.title}
+          onChange={setField("title")}
+          className={inputClass}
+          placeholder="Home-baked eggless cakes"
+        />
       </Field>
 
       {/* The icon follows the category — asking a new provider to type an
           emoji into their very first form was never a fair first question. */}
       <Field label="Category">
-        <select name="category_id" className={inputClass} defaultValue="">
+        <select
+          name="category_id"
+          value={listing.category_id}
+          onChange={setField("category_id")}
+          className={inputClass}
+        >
           <option value="">Choose one</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
@@ -86,8 +128,14 @@ export default function OnboardingForm({
       </Field>
 
       <Field label="Describe it" hint="two or three lines is plenty">
-        <textarea name="description" rows={3} className={inputClass}
-          placeholder="What you make, how it works, how much notice you need…" />
+        <textarea
+          name="description"
+          rows={3}
+          value={listing.description}
+          onChange={setField("description")}
+          className={inputClass}
+          placeholder="What you make, how it works, how much notice you need…"
+        />
       </Field>
 
       <Field label="Starting price (₹)" hint="optional">

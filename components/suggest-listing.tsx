@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { suggestListing, type SuggestState } from "@/app/provider/listings/suggest-action";
 import { Button, Card, Note, inputClass } from "@/components/ui";
-import { SubmitButton } from "@/components/submit";
+import { Spinner } from "@/components/icons";
 import { PHOTO_TYPES, shrink } from "@/lib/images";
 import type { Category } from "@/lib/types";
 
@@ -46,18 +46,32 @@ export default function SuggestListing({
   /** Set when an administrator is writing on somebody else's behalf. */
   asProvider?: string;
 }) {
-  const [state, action] = useActionState<SuggestState, FormData>(
-    suggestListing,
-    {}
-  );
+  /* Its own state rather than useActionState, because useActionState needs a
+     <form> and this panel has to be able to sit INSIDE one — the sign-up page
+     is a single form from the name field to the submit button, and that is the
+     screen where a first listing gets written. */
+  const [state, setState] = useState<SuggestState>({});
+  const [busy, run] = useTransition();
   const [open, setOpen] = useState(false);
   const [used, setUsed] = useState(false);
 
   const [poster, setPoster] = useState<string | null>(null);
   const [posterName, setPosterName] = useState<string>("");
   const [preparing, setPreparing] = useState(false);
-  const [typed, setTyped] = useState(state.what ?? "");
+  const [typed, setTyped] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  function ask() {
+    run(async () => {
+      setState(
+        await suggestListing({
+          what: typed,
+          poster: fileRef.current?.files?.[0] ?? null,
+          asProvider: asProvider ?? null,
+        })
+      );
+    });
+  }
 
   // The object URL for the thumbnail is a handle on memory, not a string.
   useEffect(() => () => {
@@ -127,10 +141,11 @@ export default function SuggestListing({
 
   return (
     <Card className="p-4 mb-5 bg-mustard-tint border-mustard/25">
-      {/* Its own form, nested nowhere near the listing form — a form inside a
-          form is not valid HTML and the browser would silently drop one. */}
-      <form action={action}>
-        {asProvider && <input type="hidden" name="as" value={asProvider} />}
+      {/* Deliberately not a <form>. This panel is rendered inside the sign-up
+          form, and a form inside a form is invalid HTML — the browser drops
+          one of them, usually the one you needed. Plain fields and a button
+          that calls the action directly. */}
+      <div>
 
         <label className="block">
           <span className="block text-body font-bold mb-1">
@@ -218,13 +233,23 @@ export default function SuggestListing({
         )}
 
         <div className="flex flex-wrap items-center gap-2.5 mt-3">
-          <SubmitButton
+          <Button
+            type="button"
             variant="ghost"
-            pendingLabel={poster ? "Reading it…" : "Writing…"}
-            disabled={preparing || (typed.trim().length < 3 && !poster)}
+            onClick={ask}
+            disabled={busy || preparing || (typed.trim().length < 3 && !poster)}
           >
-            {s ? "Try again" : poster ? "Read it and write the listing" : "Write it for me"}
-          </SubmitButton>
+            {busy && <Spinner size={15} />}
+            {busy
+              ? poster
+                ? "Reading it…"
+                : "Writing…"
+              : s
+                ? "Try again"
+                : poster
+                  ? "Read it and write the listing"
+                  : "Write it for me"}
+          </Button>
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             Close
           </Button>
@@ -232,7 +257,7 @@ export default function SuggestListing({
             It never writes a price. That one is yours.
           </span>
         </div>
-      </form>
+      </div>
 
       {s && (
         <div className="mt-4 pt-4 border-t border-mustard/25">

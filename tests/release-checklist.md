@@ -101,6 +101,8 @@ stop and fix it before anything else on this page.
 |---|---|---|
 | L11 | A second listing can be added | manual |
 | L12 | **"Not sure what to write? Let me draft it"** is on the screen at all | **S** |
+| L12a | It is on the **sign-up form** too, where a first listing gets written | manual |
+| L12b | Applying a draft there fills the title, description and category, and all three stay editable | manual |
 | L13 | The draft is sensible, in the right voice, and describes their actual work | manual — quality, and no machine can judge it |
 | L14 | The draft never contains a price, a phone number or an invented certificate | **A** + manual — read three of them |
 | L14a | **Send a poster instead of typing** — it reads the timings, the venue and what they do | manual |
