@@ -29,6 +29,7 @@ const EMPTY = {
   price_unit: "onwards",
   availability: "",
   keywords: "",
+  additional_info: "",
 };
 
 /**
@@ -241,6 +242,33 @@ export default function ListForProvider({
               name="keywords" value={v.keywords} onChange={set("keywords")}
               className={inputClass} placeholder="cake, eggless, birthday"
             />
+          </Field>
+
+          {/* The same field the provider's own form has had all along, and the
+              one this panel was missing — so every listing made on somebody's
+              behalf started with no notice period, no delivery area and
+              nothing about payment, and no way to add one until they had an
+              account of their own. Which, for the people this panel exists to
+              serve, is usually never.
+
+              What you write here goes straight onto the listing. Elsewhere
+              this note is screened before it goes public, because a provider
+              wrote it; here you wrote it, and you are the screening. */}
+          <Field label="Anything else neighbours should know" hint="optional">
+            <textarea
+              name="additional_info"
+              rows={3}
+              maxLength={600}
+              value={v.additional_info}
+              onChange={set("additional_info")}
+              className={inputClass}
+              placeholder="Two days' notice for large orders. Delivery within the society only. UPI or cash on collection."
+            />
+            <span className="block mt-1.5 text-caption text-charcoal-faint leading-snug">
+              Notice they need, the area they cover, how they take payment,
+              festival timings. Not their phone number — that stays private
+              until they accept a request.
+            </span>
           </Field>
 
           {/* Who agrees, and how it is recorded. Two honest answers, and the

@@ -36,10 +36,12 @@
 --      non-administrator does may produce an APPROVED society, and merging a
 --      duplicate must carry everybody across before deleting the row.
 --
---   6. THE LISTING NOTE (0039) — "anything else neighbours should know", which
---      was written, saved, moderated and then never published. The fix has to
---      publish a FIRST note without publishing an unreviewed later change to
---      one, and both halves are checked.
+--   6. THE LISTING NOTE (0039, 0040) — "anything else neighbours should know",
+--      which was written, saved, moderated and then never published. The fix
+--      has to publish a FIRST note without publishing an unreviewed later
+--      change to one, and both halves are checked. 0040 adds the same field to
+--      the admin's own listing panel, where it goes live immediately because
+--      the person who wrote it is the person who screens it.
 -- ============================================================================
 
 \set ON_ERROR_STOP on
@@ -629,6 +631,60 @@ begin
     raise exception 'FAIL: a note appeared on a listing that never had one';
   end if;
   raise notice 'PASS: a listing with no note is left alone';
+
+  -- ---------------------------------------------------------------- 0040 ----
+  -- The same note, written by an administrator listing on somebody's behalf.
+  declare
+    u_admin uuid := gen_random_uuid();
+    res     jsonb;
+    st      text;
+  begin
+    insert into auth.users (id, email) values (u_admin, 'note-admin40@test');
+    insert into profiles (id, email, full_name, role)
+      values (u_admin, 'note-admin40@test', 'Admin', 'admin')
+      on conflict (id) do update set role = 'admin';
+
+    perform test_as(u_admin);
+    res := admin_create_provider(
+      'Listed By Admin', '9845440044', loc, null,
+      'Group yoga at the club house', null, cat, null, 'onwards', null, '{}',
+      '2026-09-v1', null, false,
+      'Bring your own mat. Two days notice for a private session.'
+    );
+    perform test_god();
+    if not (res->>'ok')::boolean then
+      raise exception 'FAIL: admin_create_provider with a note was refused: %', res;
+    end if;
+
+    select additional_info, additional_info_pending, status::text
+      into live, pend, st
+      from listings where id = (res->>'listing_id')::uuid;
+
+    if live is null then
+      raise exception 'FAIL: an administrator wrote a note and it was not saved';
+    end if;
+    if pend is not null then
+      raise exception 'FAIL: the administrator was sent to a queue to approve their own sentence';
+    end if;
+    raise notice 'PASS: an administrator writing the note publishes it at once';
+
+    -- And on the consent path it survives, without the listing going live.
+    perform test_as(u_admin);
+    res := admin_create_provider(
+      'Held By Admin', '9845440055', loc, null, 'Held listing', null, cat,
+      null, 'onwards', null, '{}', null, null, true, 'Two days notice please.'
+    );
+    perform test_god();
+    select additional_info, status::text into live, st
+      from listings where id = (res->>'listing_id')::uuid;
+    if st <> 'pending' then
+      raise exception 'FAIL: a listing awaiting consent went live';
+    end if;
+    if live <> 'Two days notice please.' then
+      raise exception 'FAIL: the note was lost on the consent path';
+    end if;
+    raise notice 'PASS: the consent path keeps the note and still holds the listing';
+  end;
 
   raise notice '--- LISTING NOTE CHECKS PASSED ---';
 end $$;

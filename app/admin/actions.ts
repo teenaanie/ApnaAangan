@@ -478,6 +478,8 @@ export async function listForProvider(
     p_terms_version: awaitConsent ? null : TERMS_VERSION,
     p_claim_email: String(formData.get("claim_email") || "").trim() || null,
     p_await_consent: awaitConsent,
+    p_additional_info:
+      String(formData.get("additional_info") || "").trim() || null,
   });
   if (error) return { error: error.message };
 

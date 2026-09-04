@@ -51,7 +51,7 @@ Only needed when you have added or changed a migration. Both suites need a
 
 ```bash
 psql "$SCRATCH_DB" -f supabase/tests/rls_and_billing.sql      # 34 checks
-psql "$SCRATCH_DB" -f supabase/tests/release_regression.sql   # 36 checks
+psql "$SCRATCH_DB" -f supabase/tests/release_regression.sql   # 38 checks
 ```
 
 Between them they cover the things that must never break: a resident cannot

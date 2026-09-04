@@ -51,7 +51,7 @@ fn(sig, since) as (values
   ('claim_my_listing(text)',                                        '0030'),
   ('my_pending_claim()',                                            '0030'),
   ('admin_attach_account(uuid,text)',                               '0030'),
-  ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean)', '0033'),
+  ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean,text)', '0040'),
   ('new_consent_token()',                                           '0034'),
   ('consent_details(text)',                                         '0033'),
   ('accept_terms_with_token(text,text)',                            '0033'),
@@ -265,11 +265,12 @@ with fn(sig) as (values
   ('request_direct_contact(text,uuid,text,text,text,text,text)'),
   ('admin_update_provider(uuid,text,text,uuid,text,text)'),
   ('accept_terms_with_token(text,text)'),
-  ('publish_first_listing_note()')
+  ('publish_first_listing_note()'),
+  ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean,text)')
 )
 select
   case when count(*) filter (where to_regprocedure(sig) is null) = 0
-       then 'Every migration up to 0039 is present on this database.'
+       then 'Every migration up to 0040 is present on this database.'
        else count(*) filter (where to_regprocedure(sig) is null)
             || ' migration(s) have NOT been run here — see the FAIL rows above.'
   end as summary

@@ -161,6 +161,9 @@ stop and fix it before anything else on this page.
 | A8 | **"Edit their listings"** appears for *every* provider, not only the ones with no account | manual |
 | A9 | Opening someone else's listings screen gives you every control — edit, photos, another listing, what's on today | manual |
 | A10 | Listing on someone's behalf works, and the "wait for them to accept" option holds it back | **R** + manual |
+| A10a | That panel has an **"anything else neighbours should know"** field | manual |
+| A10b | What you write there goes straight onto the listing — no second approval, because you wrote it | **R** |
+| A10c | It survives the "wait for them to accept" path without the listing going live early | **R** |
 | A11 | The consent link can be copied and sent by WhatsApp | manual |
 | A12 | After a decline, you can fix the listing and send it again | manual |
 | A13 | **Societies waiting to be checked** appear at the top of the societies screen | manual |

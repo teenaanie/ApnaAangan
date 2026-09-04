@@ -220,7 +220,7 @@ psql "$DATABASE_URL" -f supabase/tests/rls_and_billing.sql
 psql "$DATABASE_URL" -f supabase/tests/release_regression.sql
 ```
 
-Thirty-four assertions in the first file and thirty-six in the second, on a
+Thirty-four assertions in the first file and thirty-eight in the second, on a
 **fresh** scratch database each time (the script inserts
 fixtures and does not clean up, so a second run on the same database fails): a resident sees zero rows in `provider_contacts` while
 providers and admins see their own; ten accepted leads are free and the eleventh
