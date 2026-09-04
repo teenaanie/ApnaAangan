@@ -2,14 +2,22 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCategories } from "@/lib/data";
-import { aiConfigured, draftListing, type Suggestion } from "@/lib/ai";
+import { aiConfigured, draftListing, type Picture, type Suggestion } from "@/lib/ai";
 
 export type SuggestState = {
   error?: string;
   suggestion?: Suggestion;
   /** Echoed back so the panel can keep what they typed after a failure. */
   what?: string;
+  /** Whether a picture was read, so the panel can say so. */
+  fromPoster?: boolean;
 };
+
+/** What the browser is allowed to send, and how big. The picture is shrunk in
+ *  the browser first, so anything arriving near this ceiling did not come from
+ *  our own form. */
+const POSTER_TYPES = /^image\/(jpeg|png|webp)$/;
+const POSTER_MAX_BYTES = 3 * 1024 * 1024;
 
 /**
  * Turn a few words into a draft listing.
@@ -30,8 +38,27 @@ export async function suggestListing(
   const what = String(formData.get("what") || "").trim();
   const asProvider = String(formData.get("as") || "") || null;
 
-  if (what.length < 3)
-    return { error: "Tell it a little about the work first.", what };
+  /* The poster, if they sent one.
+   *
+   * Most providers worth listing already have one — somebody made it for them,
+   * it has the timings and the venue on it, and they send it on WhatsApp all
+   * day. Asking them to retype it into a form is the friction this whole panel
+   * exists to remove, so reading it is the shortest path from "I want to be
+   * listed" to a listing. */
+  const upload = formData.get("poster");
+  const file =
+    upload instanceof File && upload.size > 0 ? upload : null;
+
+  if (file) {
+    if (!POSTER_TYPES.test(file.type))
+      return { error: "That needs to be a JPEG, PNG or WebP picture.", what };
+    if (file.size > POSTER_MAX_BYTES)
+      return { error: "That picture is too large. Try a smaller one.", what };
+  }
+
+  // With a picture there is nothing they have to type. Without one, there is.
+  if (!file && what.length < 3)
+    return { error: "Tell it a little about the work first, or send a poster.", what };
 
   if (!aiConfigured())
     return {
@@ -42,7 +69,10 @@ export async function suggestListing(
   const supabase = await createClient();
 
   const { data: begun, error: beginError } = await supabase.rpc("ai_draft_begin", {
-    p_prompt: what,
+    // Recorded as typed, with a marker when a picture did the work — so the
+    // stored prompt still says what was asked when somebody reads the table
+    // back and wonders why the draft says what it says.
+    p_prompt: file ? `[poster] ${what}`.trim() : what,
     p_provider_id: asProvider,
   });
   if (beginError) return { error: beginError.message, what };
@@ -52,9 +82,18 @@ export async function suggestListing(
 
   try {
     const categories = await getCategories();
+
+    const picture: Picture | undefined = file
+      ? {
+          mime: file.type,
+          b64: Buffer.from(await file.arrayBuffer()).toString("base64"),
+        }
+      : undefined;
+
     const suggestion = await draftListing(
       what,
-      categories.map((c) => ({ slug: c.slug, label: c.label }))
+      categories.map((c) => ({ slug: c.slug, label: c.label })),
+      picture
     );
     if (!suggestion) return { error: "Suggestions are not switched on.", what };
 
@@ -63,7 +102,7 @@ export async function suggestListing(
       p_output: suggestion,
     });
 
-    return { suggestion, what };
+    return { suggestion, what, fromPoster: Boolean(file) };
   } catch (err) {
     // The attempt is already on the record with an empty output, which is the
     // signal worth having. The person gets a plain sentence and their own

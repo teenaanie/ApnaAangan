@@ -14,6 +14,7 @@ it again:
 | **H** | `supabase/tests/health-check.sql` — did the migrations land | paste into the Supabase SQL editor |
 | **R** | `supabase/tests/release_regression.sql` — the rules, in a real database | `psql "$SCRATCH_DB" -f …` |
 | **B** | `supabase/tests/rls_and_billing.sql` — privacy and money | `psql "$SCRATCH_DB" -f …` |
+| **A** | `tests/ai-poster.test.mjs` — what must not survive a poster | `npm run test:ai` |
 
 **Manual** means a person opens the site and looks. The manual list is
 deliberately short and ordered by what breaks most often — see
@@ -101,7 +102,12 @@ stop and fix it before anything else on this page.
 | L11 | A second listing can be added | manual |
 | L12 | **"Not sure what to write? Let me draft it"** is on the screen at all | **S** |
 | L13 | The draft is sensible, in the right voice, and describes their actual work | manual — quality, and no machine can judge it |
-| L14 | The draft never contains a price, a phone number or an invented certificate | manual — read three of them |
+| L14 | The draft never contains a price, a phone number or an invented certificate | **A** + manual — read three of them |
+| L14a | **Send a poster instead of typing** — it reads the timings, the venue and what they do | manual |
+| L14b | The poster's phone number does not reach the listing, however large it is printed | **A** |
+| L14c | The sentence that carried the number goes with it — no "Contact to join" stumps | **A** |
+| L14d | A price printed on the poster is not copied into the words | **A** |
+| L14e | The picture is not kept — it is read once and forgotten | manual |
 | L15 | Pressing "Use this" fills the form and everything stays editable | manual |
 | L16 | The sixteenth draft in an hour is refused | **R** |
 | L17 | Nobody can read anybody else's drafts | **R** |

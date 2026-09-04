@@ -11,7 +11,9 @@
  * EXIF orientation is handled by createImageBitmap's imageOrientation option,
  * without which portrait photos from many Android phones arrive on their side.
  *
- * Lived inside the photo strip until the add-listing form needed it too.
+ * Lived inside the photo strip until the add-listing form needed it too, and
+ * then the poster reader — which passes a larger edge, because what matters on
+ * a poster is the small type along the bottom, not how it looks.
  */
 export const MAX_PHOTOS = 4;
 const MAX_EDGE = 1600;
@@ -19,9 +21,15 @@ const JPEG_QUALITY = 0.82;
 
 export const PHOTO_TYPES = /^image\/(jpeg|png|webp)$/;
 
-export async function shrink(file: File): Promise<Blob> {
+export async function shrink(
+  file: File,
+  opts?: { maxEdge?: number; quality?: number }
+): Promise<Blob> {
+  const maxEdge = opts?.maxEdge ?? MAX_EDGE;
+  const quality = opts?.quality ?? JPEG_QUALITY;
+
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale);
   const h = Math.round(bitmap.height * scale);
 
@@ -34,7 +42,7 @@ export async function shrink(file: File): Promise<Blob> {
   bitmap.close();
 
   const blob = await new Promise<Blob | null>((res) =>
-    canvas.toBlob(res, "image/jpeg", JPEG_QUALITY)
+    canvas.toBlob(res, "image/jpeg", quality)
   );
   if (!blob) throw new Error("Could not read that image.");
   return blob;

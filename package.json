@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "smoke": "node tests/smoke.mjs"
+    "smoke": "node tests/smoke.mjs",
+    "test:ai": "node --experimental-strip-types --test tests/ai-poster.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

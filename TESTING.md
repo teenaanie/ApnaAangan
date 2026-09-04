@@ -29,7 +29,11 @@ are done.
 ```bash
 npm run smoke -- https://staging.apnaaangan.com
 npm run smoke -- https://apnaaangan.com
+npm run test:ai                    # 13 checks, no network, no API key
 ```
+
+`test:ai` is the one that keeps a phone number off a public page. Run it after
+any change to `lib/ai.ts` or to the model.
 
 No installs, no browser, no test account. It reads the deployed site as a
 stranger would and checks nineteen things: the front page renders, the admin
@@ -91,7 +95,8 @@ written, a QR code scanning off a printed sticker, how it all behaves on
 society wifi. These fail in ways that only appear on a handset.
 
 **Whether the AI writes anything good.** Its refusals are tested — no price, no
-phone number, no invented certificate, fifteen an hour and no more. Whether a
+phone number, no invented certificate, fifteen an hour and no more — and so is
+what it does with a poster that has a number in 40pt type. Whether a
 draft reads like a person and describes the work honestly is a judgement, and
 it is the one that matters most, because the words go out in somebody's name.
 Read three drafts after any change to `lib/ai.ts` or the model.
@@ -116,6 +121,7 @@ TESTING.md                            this page — the runbook
 tests/
   release-checklist.md                every check, by journey, auto or manual
   smoke.mjs                           npm run smoke -- <url>
+  ai-poster.test.mjs                  npm run test:ai
 supabase/tests/
   health-check.sql                    read-only; safe to paste into production
   rls_and_billing.sql                 privacy and money        (scratch db)
