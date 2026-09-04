@@ -197,7 +197,19 @@ npm run typecheck
 npm run build
 ```
 
-The database guarantees have their own test. Against a scratch database:
+**The runbook is [TESTING.md](TESTING.md)** — the four steps to run after every
+deployment, and [tests/release-checklist.md](tests/release-checklist.md) for
+every check by journey, marked automated or manual. In short:
+
+```bash
+npm run smoke -- https://staging.apnaaangan.com   # the deployed site, as a stranger
+```
+
+plus `supabase/tests/health-check.sql` pasted into the SQL editor of **both**
+databases, which is read-only and proves every migration has actually run
+there.
+
+The database guarantees have their own tests. Against a scratch database:
 
 ```bash
 psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
@@ -205,9 +217,11 @@ psql "$DATABASE_URL" -f supabase/migrations/0002_seed.sql
 psql "$DATABASE_URL" -f supabase/migrations/0003_tiered_lead_fees.sql
 psql "$DATABASE_URL" -f supabase/migrations/0005_view_security.sql
 psql "$DATABASE_URL" -f supabase/tests/rls_and_billing.sql
+psql "$DATABASE_URL" -f supabase/tests/release_regression.sql
 ```
 
-Thirty-one assertions, on a **fresh** scratch database each time (the script inserts
+Thirty-four assertions in the first file and thirty-one in the second, on a
+**fresh** scratch database each time (the script inserts
 fixtures and does not clean up, so a second run on the same database fails): a resident sees zero rows in `provider_contacts` while
 providers and admins see their own; ten accepted leads are free and the eleventh
 is charged; declining or ignoring a request costs nothing; a food listing charges

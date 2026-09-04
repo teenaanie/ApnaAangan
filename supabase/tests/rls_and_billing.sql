@@ -80,6 +80,13 @@ begin
   perform set_config('role', 'postgres', false);
   perform set_config('request.jwt.claim.sub', '', false);
 
+  -- Billing is switched OFF by default — migration 0020 added the switch and
+  -- seeded it off for the free pilot, and with it off nothing is ever charged.
+  -- These checks are about what happens WHEN it is on, so turn it on here.
+  -- Without this the suite fails at "expected 0 free left, got 10", which is
+  -- what it did silently from the day 0020 landed until this line was added.
+  update platform_settings set billing_enabled = true where id;
+
   -- 10 accepted leads should all be free.
   for i in 1..10 loop
     insert into leads (provider_id, listing_id, resident_id, resident_name,

@@ -507,3 +507,35 @@ export async function setContactMode(formData: FormData) {
   if (error) redirect(`${back}?err=${encodeURIComponent(error.message)}`);
   redirect(back);
 }
+
+/**
+ * A society that is not on the list yet.
+ *
+ * Called directly rather than through a form action, because this control
+ * lives inside the sign-up form and a form inside a form is not valid HTML —
+ * the browser silently drops one of them. The caller holds the values and
+ * passes them in.
+ *
+ * Everything that decides whether this is allowed is in the database
+ * (migration 0038): the status is set there, not here, so there is no shape of
+ * request from this app or any other that produces an approved society.
+ */
+export async function proposeSociety(
+  name: string,
+  area?: string,
+  pincode?: string
+): Promise<{ ok: boolean; id?: string; name?: string; existing?: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("propose_society", {
+    p_name: name,
+    p_area: area?.trim() || null,
+    p_pincode: pincode?.trim() || null,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const res = data as { ok: boolean; id?: string; name?: string; existing?: boolean; error?: string };
+  if (!res?.ok) return { ok: false, error: res?.error ?? "Could not add that society." };
+
+  revalidatePath("/admin/societies");
+  return { ok: true, id: res.id, name: res.name, existing: res.existing };
+}

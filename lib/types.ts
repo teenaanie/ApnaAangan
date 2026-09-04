@@ -25,6 +25,13 @@ export type Locality = {
   /** Optional, added in migration 0026 — lets sign-up offer the nearest one. */
   lat?: number | null;
   lng?: number | null;
+  /** Added in 0038. A society a lister named for themselves starts 'pending'
+   *  and is not offered to residents until an administrator has looked at it.
+   *  Optional here because rows created before 0038 simply default to
+   *  'approved' and older queries do not ask for the column. */
+  status?: "pending" | "approved" | "rejected";
+  pincode?: string | null;
+  proposed_at?: string | null;
 };
 export type Category = { id: string; slug: string; label: string; icon: string; sort: number };
 

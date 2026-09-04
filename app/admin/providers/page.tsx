@@ -262,24 +262,29 @@ function ProviderRow({ r, localities }: { r: Row; localities: Locality[] }) {
             />
           )}
 
-          {/* No account attached — someone listed them rather than them
-              signing up. Everything works, but they cannot manage it
-              themselves until it is handed over. */}
-          {!r.user_id && !awaitingConsent && (
+          {/* Opens their listings screens with every control working — edit
+              the words, the price, the category, the photos, add another
+              listing, say what is on today.
+
+              This used to appear only for providers with no account of their
+              own, on the reasoning that anyone else could do it themselves.
+              They can — and they ring up and ask anyway, because they are
+              standing in a kitchen with flour on their hands. The database has
+              allowed an administrator to edit anybody's listing since 0031;
+              this was a gate in the interface and nothing else, and while it
+              was there the answer to "can you fix my listing" was hand-written
+              SQL. Reported 3 September 2026. */}
+          {!awaitingConsent && (
             <div className="mt-1.5">
-              <Badge tone="mustard">You manage this one</Badge>
+              {!r.user_id && <Badge tone="mustard">You manage this one</Badge>}
               <div className="mt-1 flex flex-wrap items-center gap-3">
-                {/* Opens their listings screens, with every control working —
-                    edit, photos, another listing, what's on today. Creating a
-                    listing for someone and then not being able to touch it was
-                    half a feature. */}
                 <Link
                   href={`/provider/listings?as=${r.id}`}
                   className="text-caption font-bold text-terracotta-deep hover:underline underline-offset-2"
                 >
-                  Manage their listings →
+                  {r.user_id ? "Edit their listings →" : "Manage their listings →"}
                 </Link>
-                <AttachAccount providerId={r.id} />
+                {!r.user_id && <AttachAccount providerId={r.id} />}
               </div>
             </div>
           )}

@@ -614,3 +614,57 @@ export async function updateProviderDetails(
   revalidatePath("/");
   return { ok: "Saved." };
 }
+
+/**
+ * Approving, rejecting or merging a society somebody proposed.
+ *
+ * Merging is the one that earns its keep. The realistic mess is not an invented
+ * society — it is four spellings of one real one, each holding a provider that
+ * the other three's neighbours will never see. Merging carries everybody across
+ * before the duplicate row goes.
+ */
+export async function decideSociety(
+  _prev: ListForState,
+  formData: FormData
+): Promise<ListForState> {
+  const supabase = await assertAdmin();
+
+  const decision = String(formData.get("decision") || "");
+  const mergeInto = String(formData.get("merge_into") || "") || null;
+
+  if (decision === "merge" && !mergeInto) {
+    return { error: "Choose the society to merge it into." };
+  }
+
+  const { data, error } = await supabase.rpc("admin_decide_society", {
+    p_locality_id: String(formData.get("locality_id") || ""),
+    p_approve: decision === "approve",
+    p_merge_into: decision === "merge" ? mergeInto : null,
+  });
+  if (error) return { error: error.message };
+
+  const res = data as {
+    ok: boolean; error?: string; action?: string;
+    name?: string; into?: string; moved?: number; attached?: number;
+  };
+  if (!res?.ok) return { error: res?.error ?? "Could not do that." };
+
+  revalidatePath("/admin/societies");
+  revalidatePath("/admin/providers");
+  revalidatePath("/");
+
+  if (res.action === "approved") return { ok: `${res.name} is live.` };
+  if (res.action === "merged")
+    return {
+      ok:
+        `${res.name} folded into ${res.into}` +
+        (res.moved ? `, and ${res.moved} provider${res.moved === 1 ? "" : "s"} moved across.` : "."),
+    };
+  return {
+    ok:
+      `${res.name} will not be offered.` +
+      (res.attached
+        ? ` ${res.attached} provider${res.attached === 1 ? " is" : "s are"} still filed under it — give them a society from the providers screen.`
+        : ""),
+  };
+}

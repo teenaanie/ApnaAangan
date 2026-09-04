@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/nav";
 import AddSociety from "./add-society";
 import EditSociety from "./edit-society";
+import PendingSociety from "./pending-society";
 import { Badge, Card, Empty, Note, SectionHeader, Shell, WideShell } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isConfigured } from "@/lib/data";
@@ -19,6 +20,10 @@ type Row = {
   city: string;
   pincode: string | null;
   map_url: string | null;
+  /** Added in 0038. Optional so this page still renders against a database
+   *  that has not run it yet — see the select below. */
+  status?: "pending" | "approved" | "rejected" | null;
+  proposed_at?: string | null;
   providers: { count: number }[];
 };
 
@@ -50,7 +55,9 @@ export default async function Societies() {
       .from("localities")
       // Only the columns this page draws. Selecting a column that a database
       // has not been migrated to yet fails the whole query — which is the
-      // failure this change exists to stop happening.
+      // failure this change exists to stop happening. `status` and
+      // `proposed_at` arrived in 0038 and are asked for separately below for
+      // exactly that reason.
       .select("id, name, slug, area, city, pincode, map_url")
       .order("name"),
     supabase.from("providers").select("locality_id"),
@@ -61,10 +68,35 @@ export default async function Societies() {
     if (p.locality_id) counts.set(p.locality_id, (counts.get(p.locality_id) ?? 0) + 1);
   }
 
-  const rows = ((data ?? []) as unknown as Array<Row & { id: string }>).map((r) => ({
+  /* Which of these is waiting to be looked at.
+   *
+   * Its own query, deliberately. `status` only exists once migration 0038 has
+   * run, and asking for a column that is not there fails the WHOLE select —
+   * which is how this page once showed nothing at all with three societies in
+   * the database. Kept separate, a database without 0038 simply has no queue,
+   * and the list of societies above renders exactly as it always did. */
+  const { data: statusRows } = await supabase
+    .from("localities")
+    .select("id, status, proposed_at");
+
+  const statusById = new Map<string, { status: string | null; proposed_at: string | null }>();
+  for (const r of (statusRows ?? []) as Array<{
+    id: string; status: string | null; proposed_at: string | null;
+  }>) {
+    statusById.set(r.id, { status: r.status, proposed_at: r.proposed_at });
+  }
+
+  const allRows = ((data ?? []) as unknown as Array<Row & { id: string }>).map((r) => ({
     ...r,
+    status: (statusById.get(r.id)?.status ?? "approved") as Row["status"],
+    proposed_at: statusById.get(r.id)?.proposed_at ?? null,
     providers: [{ count: counts.get(r.id) ?? 0 }],
   })) as unknown as Row[];
+
+  // Rejected ones are not deleted, they are simply not offered — and they are
+  // not worth a section of their own on a screen used once a week.
+  const pending = allRows.filter((r) => r.status === "pending");
+  const rows = allRows.filter((r) => r.status !== "pending" && r.status !== "rejected");
 
   return (
     <>
@@ -98,6 +130,36 @@ export default async function Societies() {
                 <span className="font-mono">{error.message}</span>. Nothing is
                 lost — this is a reading problem, not a missing-data problem.
               </Note>
+            </div>
+          )}
+
+          {/* Above the list, because this is the only part of the page with
+              somebody waiting on the other end of it. A lister who could not
+              find their society has already signed up and is attached to what
+              they typed; until this is answered, their neighbours cannot
+              filter to them. */}
+          {pending.length > 0 && (
+            <div className="mb-9">
+              <SectionHeader>
+                Waiting to be checked · {pending.length}
+              </SectionHeader>
+              <div className="mb-3">
+                <Note tone="mustard">
+                  Someone signing up could not find their society and named it
+                  themselves. Approve it if it is real, or fold it into the one
+                  it is a misspelling of — that moves everybody across.
+                </Note>
+              </div>
+              <div className="max-w-2xl">
+                {pending.map((s) => (
+                  <PendingSociety
+                    key={s.id}
+                    society={s as never}
+                    approved={rows as never}
+                    providerCount={s.providers?.[0]?.count ?? 0}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

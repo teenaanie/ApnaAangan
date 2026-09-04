@@ -137,10 +137,45 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   return (data as Category[]) ?? [];
 });
 
+/**
+ * The societies anyone may be offered — the public filter, the sign-up
+ * dropdown, the admin's forms.
+ *
+ * Only approved ones. Since migration 0038 a lister who cannot find their
+ * society may name it themselves, and what they name arrives as 'pending':
+ * real enough for them to finish signing up and be attached to, not yet real
+ * enough to offer a resident, who would otherwise be invited to filter by
+ * somebody's typo.
+ *
+ * The filter is written to tolerate a database that has not run 0038 yet —
+ * `is` null covers rows from before the column existed — because the app is
+ * deployed separately from its migrations and there is always a minute where
+ * one has landed and the other has not.
+ */
 export const getLocalities = cache(async (): Promise<Locality[]> => {
   if (!isConfigured()) return [];
   const supabase = await createClient();
-  const { data } = await supabase.from("localities").select("*").order("name");
+  const { data } = await supabase
+    .from("localities")
+    .select("*")
+    .or("status.eq.approved,status.is.null")
+    .order("name");
+  return (data as Locality[]) ?? [];
+});
+
+/** Societies a lister has named that nobody has looked at yet. Admin only —
+ *  RLS lets anyone read the row, but only the admin screens ask for these. */
+export const getPendingSocieties = cache(async (): Promise<Locality[]> => {
+  if (!isConfigured()) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("localities")
+    .select("*")
+    .eq("status", "pending")
+    .order("proposed_at", { ascending: false });
+  // Before 0038 there is no status column and this query fails. An empty
+  // queue is the right answer then, not a broken page.
+  if (error) return [];
   return (data as Locality[]) ?? [];
 });
 
