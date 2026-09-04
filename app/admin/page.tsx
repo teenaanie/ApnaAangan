@@ -136,11 +136,19 @@ export default async function AdminPage() {
     .from("listings")
     .select("id, title, status, additional_info, additional_info_pending, additional_info_at, providers(public_id, display_name)")
     .not("additional_info_pending", "is", null)
-    // A note on a rejected or archived listing is a decision about something
-    // nobody will see. It stays in the database; it just does not ask for your
-    // attention. Notes on listings still awaiting approval are shown on the
-    // approval card above instead, and are published by approving it.
-    .in("status", ["approved", "paused"])
+    // A note on a rejected listing is a decision about something nobody will
+    // see. It stays in the database; it just does not ask for your attention.
+    // Notes on listings still awaiting approval are shown on the approval card
+    // above instead, and are published by approving it.
+    //
+    // `approved` and nothing else. This was briefly `["approved", "paused"]`,
+    // and "paused" is not a listing status — the moderation enum is exactly
+    // pending / approved / rejected, and a paused listing is one with
+    // `paused_at` set. PostgREST rejected the whole query with
+    //     invalid input value for enum moderation: "paused"
+    // which returned no rows at all and emptied this queue, so a note that was
+    // sitting there waiting looked like a note that had never been written.
+    .eq("status", "approved")
     .order("additional_info_at");
 
   const pendingInfo = (infoRows ?? []) as unknown as Array<{
