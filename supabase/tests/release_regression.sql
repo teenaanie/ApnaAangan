@@ -35,6 +35,11 @@
 --   5. SOCIETIES (0038) — a lister naming their own society. Nothing a
 --      non-administrator does may produce an APPROVED society, and merging a
 --      duplicate must carry everybody across before deleting the row.
+--
+--   6. THE LISTING NOTE (0039) — "anything else neighbours should know", which
+--      was written, saved, moderated and then never published. The fix has to
+--      publish a FIRST note without publishing an unreviewed later change to
+--      one, and both halves are checked.
 -- ============================================================================
 
 \set ON_ERROR_STOP on
@@ -537,6 +542,95 @@ begin
   raise notice 'PASS: rejecting hides it without deleting anything';
 
   raise notice '--- SOCIETY CHECKS PASSED ---';
+end $$;
+
+-- ==================================================== 6 · THE LISTING NOTE ==
+do $$
+declare
+  u_prov  uuid := gen_random_uuid();
+  u_admin uuid := gen_random_uuid();
+  loc  uuid; cat uuid; prov uuid; lst uuid; bare uuid;
+  live text; pend text;
+begin
+  insert into auth.users (id, email) values
+    (u_prov, 'note-prov@test'), (u_admin, 'note-admin@test');
+  insert into profiles (id, email, full_name, role) values
+    (u_prov,  'note-prov@test',  'Note Provider', 'provider'),
+    (u_admin, 'note-admin@test', 'Admin',         'admin')
+    on conflict (id) do update set role = excluded.role;
+
+  select id into loc from localities where status = 'approved' limit 1;
+  select id into cat from categories limit 1;
+
+  insert into providers (user_id, display_name, locality_id, status,
+                         terms_version, terms_accepted_at)
+    values (u_prov, 'Note Baker', loc, 'active', '2026-09-v1', now())
+    returning id into prov;
+
+  -- Exactly what addListing does: create the listing, then queue the note.
+  insert into listings (provider_id, category_id, title, status)
+    values (prov, cat, 'Weekend sourdough', 'pending') returning id into lst;
+
+  perform test_as(u_prov);
+  perform set_listing_additional_info(lst, 'Two days notice for large orders. UPI or cash.');
+  perform test_god();
+
+  select additional_info into live from listings where id = lst;
+  if live is not null then
+    raise exception 'FAIL: an unapproved note was published straight away';
+  end if;
+  raise notice 'PASS: a new note waits rather than publishing itself';
+
+  -- Exactly what the Approve button does.
+  update listings set status = 'approved' where id = lst;
+
+  select additional_info, additional_info_pending into live, pend
+    from listings where id = lst;
+  if live is null then
+    raise exception 'FAIL: approving the listing did not publish the note it came with';
+  end if;
+  if pend is not null then
+    raise exception 'FAIL: the pending copy was left behind and will be asked about twice';
+  end if;
+  raise notice 'PASS: approving a new listing publishes the note it arrived with';
+
+  -- A CHANGE to a live note is a different question and keeps its own review.
+  perform test_as(u_prov);
+  perform set_listing_additional_info(lst, 'Now three days notice.');
+  perform test_god();
+
+  update listings set status = 'pending'  where id = lst;
+  update listings set status = 'approved' where id = lst;
+
+  select additional_info, additional_info_pending into live, pend
+    from listings where id = lst;
+  if live <> 'Two days notice for large orders. UPI or cash.' then
+    raise exception 'FAIL: an unreviewed change to a live note was published: [%]', live;
+  end if;
+  if pend is null then
+    raise exception 'FAIL: the pending change was lost';
+  end if;
+  raise notice 'PASS: a later change to a live note still waits for its own review';
+
+  perform test_as(u_admin);
+  perform decide_listing_additional_info(lst, true);
+  perform test_god();
+  select additional_info into live from listings where id = lst;
+  if live <> 'Now three days notice.' then
+    raise exception 'FAIL: approving the change did not publish it: [%]', live;
+  end if;
+  raise notice 'PASS: approving the change publishes it';
+
+  -- And nothing is invented for a listing that never had a note.
+  insert into listings (provider_id, category_id, title, status)
+    values (prov, cat, 'Plain listing', 'pending') returning id into bare;
+  update listings set status = 'approved' where id = bare;
+  if (select additional_info from listings where id = bare) is not null then
+    raise exception 'FAIL: a note appeared on a listing that never had one';
+  end if;
+  raise notice 'PASS: a listing with no note is left alone';
+
+  raise notice '--- LISTING NOTE CHECKS PASSED ---';
 end $$;
 
 do $$ begin raise notice '=== ALL RELEASE REGRESSION CHECKS PASSED ==='; end $$;

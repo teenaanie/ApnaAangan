@@ -62,7 +62,8 @@ fn(sig, since) as (values
   ('ai_draft_begin(text,uuid)',                                     '0037'),
   ('ai_draft_finish(uuid,jsonb)',                                   '0037'),
   ('propose_society(text,text,text)',                               '0038'),
-  ('admin_decide_society(uuid,boolean,uuid)',                       '0038')
+  ('admin_decide_society(uuid,boolean,uuid)',                       '0038'),
+  ('publish_first_listing_note()',                                  '0039')
 ),
 fn_check as (
   select 'function' as area, sig as item, since,
@@ -126,7 +127,8 @@ trg(name, tbl, since) as (values
   ('providers_guard_consent',       'providers',  '0033'),
   ('providers_guard_contact_mode',  'providers',  '0036'),
   ('listings_clear_prev',           'listings',   '0032'),
-  ('listing_photos_limit',          'listing_photos', '0022')
+  ('listing_photos_limit',          'listing_photos', '0022'),
+  ('listings_publish_first_note',   'listings',   '0039')
 ),
 trg_check as (
   select 'trigger' as area, name as item, since,
@@ -262,11 +264,12 @@ with fn(sig) as (values
   ('ai_draft_begin(text,uuid)'),
   ('request_direct_contact(text,uuid,text,text,text,text,text)'),
   ('admin_update_provider(uuid,text,text,uuid,text,text)'),
-  ('accept_terms_with_token(text,text)')
+  ('accept_terms_with_token(text,text)'),
+  ('publish_first_listing_note()')
 )
 select
   case when count(*) filter (where to_regprocedure(sig) is null) = 0
-       then 'Every migration up to 0038 is present on this database.'
+       then 'Every migration up to 0039 is present on this database.'
        else count(*) filter (where to_regprocedure(sig) is null)
             || ' migration(s) have NOT been run here — see the FAIL rows above.'
   end as summary

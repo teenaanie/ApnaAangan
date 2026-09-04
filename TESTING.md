@@ -51,15 +51,16 @@ Only needed when you have added or changed a migration. Both suites need a
 
 ```bash
 psql "$SCRATCH_DB" -f supabase/tests/rls_and_billing.sql      # 34 checks
-psql "$SCRATCH_DB" -f supabase/tests/release_regression.sql   # 31 checks
+psql "$SCRATCH_DB" -f supabase/tests/release_regression.sql   # 36 checks
 ```
 
 Between them they cover the things that must never break: a resident cannot
 read a phone number, billing is free for ten and then charges correctly,
 declining costs nothing, consent tokens cannot be guessed or reused, the direct
 WhatsApp path is never charged and inherits every abuse guard, an administrator
-can edit a provider without erasing their number, the AI has a rate limit, and
-nothing a lister does creates an approved society.
+can edit a provider without erasing their number, the AI has a rate limit,
+nothing a lister does creates an approved society, and the note a provider
+writes with a listing is published when that listing is approved.
 
 If you have no scratch database to hand, ask Claude to run these — it can build
 a Supabase-shaped Postgres and run the whole chain in a couple of minutes.

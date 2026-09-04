@@ -38,7 +38,7 @@ export default async function AdminPage() {
     // (see moderateProvider); this section is for listings added later, by
     // someone already in the directory.
     supabase.from("listings")
-      .select("id, title, description, status, first_approved_at, edited_at, prev_title, prev_description, providers!inner(public_id, display_name, status, localities(name, area), provider_contacts(phone))")
+      .select("id, title, description, status, first_approved_at, edited_at, prev_title, prev_description, additional_info, additional_info_pending, providers!inner(public_id, display_name, status, localities(name, area), provider_contacts(phone))")
       .eq("status", "pending").in("providers.status", ["active", "paused"])
       .order("created_at").limit(30),
     supabase.from("provider_updates").select("id, headline, detail, kind, status, providers(public_id, display_name)")
@@ -134,12 +134,17 @@ export default async function AdminPage() {
   // them write "for cakes… for tuition…" beside only one of the two.
   const { data: infoRows } = await supabase
     .from("listings")
-    .select("id, title, additional_info, additional_info_pending, additional_info_at, providers(public_id, display_name)")
+    .select("id, title, status, additional_info, additional_info_pending, additional_info_at, providers(public_id, display_name)")
     .not("additional_info_pending", "is", null)
+    // A note on a rejected or archived listing is a decision about something
+    // nobody will see. It stays in the database; it just does not ask for your
+    // attention. Notes on listings still awaiting approval are shown on the
+    // approval card above instead, and are published by approving it.
+    .in("status", ["approved", "paused"])
     .order("additional_info_at");
 
   const pendingInfo = (infoRows ?? []) as unknown as Array<{
-    id: string; title: string;
+    id: string; title: string; status: string;
     additional_info: string | null; additional_info_pending: string | null;
     providers: { public_id: string; display_name: string } | null;
   }>;
@@ -166,6 +171,7 @@ export default async function AdminPage() {
     id: string; title: string; description: string | null;
     first_approved_at: string | null; edited_at: string | null;
     prev_title: string | null; prev_description: string | null;
+    additional_info: string | null; additional_info_pending: string | null;
     providers: {
       public_id: string; display_name: string;
       localities: { name: string; area: string | null } | null;
@@ -552,6 +558,32 @@ export default async function AdminPage() {
                         Edited before the previous wording was being kept, so there
                         is nothing to compare against.
                       </p>
+                    )}
+
+                    {/* The note that came with the listing — notice period,
+                        delivery area, how they take payment.
+
+                        It used to be invisible here and sat in the "Extra
+                        detail" queue further down, waiting for a second
+                        decision nobody knew was outstanding, while the listing
+                        went live without it. Since migration 0039, approving a
+                        listing for the first time publishes the note it
+                        arrived with — so it has to be readable on the card you
+                        are pressing Approve on. A note CHANGED later on a live
+                        listing is a different question and still has its own
+                        queue below. */}
+                    {l.additional_info_pending && !l.additional_info && (
+                      <div className="mt-2.5 rounded-2xl border border-sandstone bg-cream p-3">
+                        <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-1">
+                          Anything else neighbours should know
+                        </p>
+                        <p className="text-body text-charcoal-soft m-0 whitespace-pre-line leading-snug">
+                          {l.additional_info_pending}
+                        </p>
+                        <p className="text-caption text-charcoal-faint m-0 mt-1.5 leading-snug">
+                          Goes onto the listing when you approve it.
+                        </p>
+                      </div>
                     )}
                   </div>
                   <div className="flex gap-2">

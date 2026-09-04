@@ -108,6 +108,11 @@ stop and fix it before anything else on this page.
 | L18 | Editing an approved listing sends it back for review, and the old wording is kept so you can compare | manual |
 | L19 | Editing a listing still pending does **not** quietly publish it | **R** |
 | L20 | Search words, availability and "anything else" all save | manual |
+| L20a | **"Anything else neighbours should know", written with a new listing, appears on the public page once you approve the listing** | **R** |
+| L20b | It does **not** appear before approval | **R** |
+| L20c | Changing that note later on a live listing waits for its own review rather than publishing itself | **R** |
+| L20d | Approving that change publishes it | **R** |
+| L20e | A listing with no note never grows one | **R** |
 | L21 | Photos upload, are resized, and wait for moderation | manual |
 | L22 | Pausing one listing leaves the others alone | manual |
 
@@ -147,6 +152,8 @@ stop and fix it before anything else on this page.
 | A1 | Every admin page redirects a signed-out visitor to the login | **S** |
 | A2 | A non-admin who is signed in cannot reach admin functions | **B** + **R** |
 | A3 | The approval queue shows the **society** each provider is in | manual |
+| A3a | The approval card shows the "anything else" note that came with a new listing, so you read it before approving | manual |
+| A3b | The "Extra detail" queue no longer lists notes on rejected listings | manual |
 | A4 | Approving a provider puts their first listing live at the same time | manual |
 | A5 | Declining with a reason shows that reason to them | manual |
 | A6 | Editing a provider's name, society or number works | **R** + manual |
