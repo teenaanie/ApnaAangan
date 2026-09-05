@@ -169,6 +169,8 @@ stop and fix it before anything else on this page.
 | # | Check | How |
 |---|---|---|
 | A1 | Every admin page redirects a signed-out visitor to the login | **S** |
+| A1a | The **Admin** link is in the header on a phone, not only on a laptop | manual — check at 390px |
+| A1b | It is shown only to an account whose profile role is `admin` | **B** + manual |
 | A2 | A non-admin who is signed in cannot reach admin functions | **B** + **R** |
 | A3 | The approval queue shows the **society** each provider is in | manual |
 | A3a | The approval card shows the "anything else" note that came with a new listing, so you read it before approving | manual |

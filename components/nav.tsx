@@ -2,7 +2,7 @@ import Link from "next/link";
 import BackLink from "@/components/back-link";
 import { Logo } from "@/components/ui";
 import { getMyProvider, getProfile } from "@/lib/data";
-import { Info, LogOut } from "@/components/icons";
+import { Chart, Info, LogOut } from "@/components/icons";
 
 /**
  * Residents never sign in, so they are never shown a sign-in link. The only
@@ -49,12 +49,23 @@ export default async function Nav({ subtitle }: { subtitle?: string }) {
           </Link>
         )}
 
+        {/* The way in, on a phone as well as a laptop.
+            This was a bare text link with `hidden sm:inline` on it, which meant
+            it disappeared below 640px — every other control in this header
+            degrades to an icon on a narrow screen, and this one vanished
+            outright. The administrator is the person most likely to be holding
+            a phone: standing in somebody's kitchen, listing them on the spot,
+            approving it before leaving. Reported 5 September 2026 as "I logged
+            in and the admin option is not shown". */}
         {profile?.role === "admin" && (
           <Link
             href="/admin"
-            className="text-body font-bold text-charcoal-soft hover:text-terracotta-deep hidden sm:inline"
+            title="Admin"
+            aria-label="Admin"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-full border border-sandstone bg-surface px-2 sm:pl-2.5 sm:pr-3 py-1.5 text-caption font-bold text-charcoal-soft hover:border-terracotta hover:text-terracotta-deep transition"
           >
-            Admin
+            <Chart size={16} />
+            <span className="hidden sm:inline">Admin</span>
           </Link>
         )}
 
