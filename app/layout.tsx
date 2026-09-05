@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
+import { siteUrl } from "@/lib/site";
 import { Logo } from "@/components/logo";
 import "./globals.css";
 
@@ -23,6 +24,9 @@ const GOOGLE_FONTS =
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
 export const metadata: Metadata = {
+  /* Without this, every relative URL in the metadata below is resolved against
+     a base Next.js has to guess. WhatsApp and Google both want absolute ones. */
+  metadataBase: new URL(siteUrl() || "https://apnaaangan.com"),
   title: {
     default: `${BRAND.name} — neighbours who make, teach and fix`,
     template: `%s · ${BRAND.name}`,
@@ -30,9 +34,34 @@ export const metadata: Metadata = {
   description: BRAND.purpose,
   icons: { icon: "/aangan-mark.svg", apple: "/icon-192.png" },
   openGraph: {
-    title: BRAND.name,
+    type: "website",
+    siteName: BRAND.name,
+    title: `${BRAND.name} — ${BRAND.descriptor}`,
     description: BRAND.tagline,
-    images: ["/aangan-mark-512.png"],
+    locale: "en_IN",
+    /* A landscape card, not the app icon.
+       This used to be aangan-mark-512.png — a 512x512 square of the bare
+       mark — and WhatsApp did exactly what it should with it: rendered a
+       enormous tile of an abstract shape with no words on it. Somebody being
+       recruited to list their yoga class saw a large orange pattern and had to
+       read the URL underneath to work out what they were being sent.
+       1200x630 is the size every previewer is built around. It carries the
+       name and the line that says what this is, which is the whole job of a
+       preview. */
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: `${BRAND.name} — ${BRAND.tagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND.name} — ${BRAND.descriptor}`,
+    description: BRAND.tagline,
+    images: ["/og.png"],
   },
   /* Keep every non-production deployment out of search results. A staging copy
      of a directory is exactly the kind of thing Google will happily index and

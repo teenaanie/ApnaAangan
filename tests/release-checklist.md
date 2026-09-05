@@ -214,6 +214,11 @@ are the ones that have actually cost time.
 | D5 | Email is off on staging and on in production | **S** |
 | D6 | Every migration has run on **this** database | **H** — run on both |
 | D7 | The agreement version on the page matches the one the build records | **S** |
+| D8 | Sharing the site on WhatsApp shows the landscape card with the name on it, not a giant tile | manual |
+| D9 | `apnaaangan.com/robots.txt` allows crawling and names the sitemap | manual |
+| D10 | `staging.apnaaangan.com/robots.txt` disallows everything | manual |
+| D11 | `apnaaangan.com/sitemap.xml` lists the home page and every provider page | manual |
+| D12 | No `/list/accept/…` URL appears in the sitemap or is allowed by robots | manual |
 
 ---
 
