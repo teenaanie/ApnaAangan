@@ -195,14 +195,33 @@ export const getPendingSocieties = cache(async (): Promise<Locality[]> => {
  * microseconds; if the directory ever reaches thousands, move search_blob to a
  * stored generated column on listings with a trigram index and match on that.
  */
+/** How many listings a resident is shown at once. Twenty-five is about three
+ *  scrolls on a phone — enough to feel like a directory, few enough to finish. */
+export const PAGE_SIZE = 25;
+
+export type ListingPage = {
+  rows: ListingCard[];
+  /** Matching the current filters, not the whole directory. */
+  total: number;
+  page: number;
+  pages: number;
+};
+
 export async function searchListings(opts: {
   q?: string;
   category?: string;
   locality?: string;
-}): Promise<ListingCard[]> {
-  if (!isConfigured()) return [];
+  page?: number;
+}): Promise<ListingPage> {
+  if (!isConfigured()) return { rows: [], total: 0, page: 1, pages: 1 };
   const supabase = await createClient();
-  let query = supabase.from("listing_cards").select("*").limit(120);
+
+  const page = Math.max(1, Math.floor(opts.page ?? 1));
+  const from = (page - 1) * PAGE_SIZE;
+
+  // `count: exact` costs a second scan, which at this size is nothing and is
+  // what lets the page say "26-50 of 63" rather than "there might be more".
+  let query = supabase.from("listing_cards").select("*", { count: "exact" });
 
   if (opts.category) query = query.eq("category_slug", opts.category);
   if (opts.locality) query = query.eq("locality_slug", opts.locality);
@@ -211,8 +230,23 @@ export async function searchListings(opts: {
     query = query.ilike("search_blob", `%${word}%`);
   }
 
-  const { data } = await query.order("avg_rating", { ascending: false });
-  return (data as ListingCard[]) ?? [];
+  const { data, count } = await query
+    .order("avg_rating", { ascending: false })
+    // The tiebreaker is not decoration. Most listings have no rating at all,
+    // so ordering by rating alone leaves the majority in whatever order the
+    // database felt like — and an unstable order across two queries means a
+    // listing can appear on page 1 and page 2, or on neither. `id` is
+    // arbitrary but it is the same arbitrary every time.
+    .order("id", { ascending: true })
+    .range(from, from + PAGE_SIZE - 1);
+
+  const total = count ?? 0;
+  return {
+    rows: (data as ListingCard[]) ?? [],
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+  };
 }
 
 /**

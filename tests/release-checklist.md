@@ -38,10 +38,21 @@ gives you about forty seconds before deciding this is not for them.
 | R3 | Searching a word that is **only** in the hidden keywords finds it — type `silai` and a stitching listing comes back | manual |
 | R4 | Two words in either order both work — `eggless cake` and `cake eggless` | manual |
 | R5 | Filtering by society narrows the list, and the society names offered are all real | manual |
+| R5a | **The society you chose last time is remembered** — arrive at a bare address and you land there | manual |
+| R5b | Choosing "All societies" is remembered as a choice, so you keep getting everything | manual |
+| R5c | A link carrying `?loc=` always wins over the remembered choice | manual |
+| R5d | **"Find mine"** asks for location only when tapped, never on arrival | manual |
+| R5e | It refuses to guess beyond 3km rather than picking a society across the city | manual |
+| R5f | A private window, or a declined permission, still leaves a working page | manual |
 | R6 | Filtering by category narrows the list | manual |
 | R7 | A society still waiting for approval is **not** offered in the filter | **R** |
 | R8 | Tapping a card opens that provider's page | **S** |
 | R9 | Photos appear, and a listing with none still looks finished | manual |
+| R9a | **Twenty-five listings a page**, with Back / More and "Page 2 of 3" | manual |
+| R9b | No listing appears on two pages, and none is unreachable | manual — needs 26+ live listings |
+| R9c | Changing a category or society drops you back to page one | manual |
+| R9d | A stale link to a page that no longer exists offers a way back rather than an empty screen | manual |
+| R9e | Page links can be bookmarked and sent on WhatsApp | manual |
 
 ### The promise about phone numbers
 

@@ -8,6 +8,7 @@ import {
   getLiveUpdates,
   getLocalities,
   isConfigured,
+  PAGE_SIZE,
   searchListings,
 } from "@/lib/data";
 import { listingLabel } from "@/lib/listing-label";
@@ -18,7 +19,7 @@ import { VERIFICATION } from "@/lib/verification";
 
 export const dynamic = "force-dynamic";
 
-type Search = { q?: string; cat?: string; loc?: string };
+type Search = { q?: string; cat?: string; loc?: string; page?: string };
 
 export default async function Home({
   searchParams,
@@ -30,21 +31,34 @@ export default async function Home({
   if (!isConfigured()) return <SetupNotice />;
 
   const [listings, categories, localities, updates] = await Promise.all([
-    searchListings({ q: sp.q, category: sp.cat, locality: sp.loc }),
+    searchListings({
+      q: sp.q,
+      category: sp.cat,
+      locality: sp.loc,
+      page: Number(sp.page) || 1,
+    }),
     getCategories(),
     getLocalities(),
     getLiveUpdates({ q: sp.q, locality: sp.loc }),
   ]);
 
+  /* Changing a filter drops the page number. Somebody on page four who taps a
+     category and lands on page four of a shorter list sees an empty screen and
+     concludes there is nothing there — so `page` is only carried when it is
+     the thing being changed. */
   const qs = (patch: Partial<Search>) => {
-    const next = { ...sp, ...patch };
+    const next = { ...sp, page: undefined, ...patch };
     const p = new URLSearchParams();
     if (next.q) p.set("q", next.q);
     if (next.cat) p.set("cat", next.cat);
     if (next.loc) p.set("loc", next.loc);
+    if (next.page && next.page !== "1") p.set("page", next.page);
     const s = p.toString();
     return s ? `/?${s}` : "/";
   };
+
+  const first = (listings.page - 1) * PAGE_SIZE + 1;
+  const last = first + listings.rows.length - 1;
 
   return (
     <>
@@ -167,7 +181,9 @@ export default async function Home({
             "cake" in it leaves the reader to work out whether the filter has
             applied yet; "12 listings matching cake" answers it. */}
         <p className="text-caption text-charcoal-soft mb-3">
-          {listings.length} {listings.length === 1 ? "listing" : "listings"}
+          {listings.pages > 1
+            ? `${first}–${last} of ${listings.total} listings`
+            : `${listings.total} ${listings.total === 1 ? "listing" : "listings"}`}
           {sp.q ? (
             <>
               {" "}matching <b className="text-charcoal">{sp.q}</b>
@@ -183,9 +199,25 @@ export default async function Home({
           )}
         </p>
 
-        {listings.length === 0 ? (
-          <Empty title={sp.q ? `Nothing matching “${sp.q}”` : "Nothing here yet"}>
-            {sp.q || sp.cat || sp.loc ? (
+        {listings.rows.length === 0 ? (
+          <Empty
+            title={
+              listings.page > 1
+                ? "Nothing on this page"
+                : sp.q
+                  ? `Nothing matching “${sp.q}”`
+                  : "Nothing here yet"
+            }
+          >
+            {listings.page > 1 ? (
+              <>
+                There are fewer listings than there were.{" "}
+                <Link href={qs({})} className="font-bold underline">
+                  Back to the first page
+                </Link>
+                .
+              </>
+            ) : sp.q || sp.cat || sp.loc ? (
               <>
                 Try a different word, or{" "}
                 <Link href="/" className="font-bold underline">
@@ -198,11 +230,48 @@ export default async function Home({
             )}
           </Empty>
         ) : (
-          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 pb-6">
-            {listings.map((l) => (
-              <ListingTile key={l.id} l={l} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 pb-6">
+              {listings.rows.map((l) => (
+                <ListingTile key={l.id} l={l} />
+              ))}
+            </div>
+
+            {/* Plain links, not a button that fetches. A page of a directory
+                should be a page: it can be bookmarked, sent on WhatsApp, and
+                opened with the back button behaving the way everyone expects.
+                Numbered rather than infinite scroll for the same reason, and
+                because "you are on page 2 of 3" is a thing you can hold in
+                your head while a scrollbar that never ends is not. */}
+            {listings.pages > 1 && (
+              <nav
+                className="flex flex-wrap items-center justify-center gap-2.5 pb-8"
+                aria-label="More listings"
+              >
+                {listings.page > 1 && (
+                  <Link
+                    href={qs({ page: String(listings.page - 1) })}
+                    className="rounded-full border border-sandstone bg-surface px-4 py-2 text-body font-bold hover:border-terracotta hover:text-terracotta-deep transition"
+                  >
+                    ← Back
+                  </Link>
+                )}
+
+                <span className="text-caption text-charcoal-soft px-1">
+                  Page {listings.page} of {listings.pages}
+                </span>
+
+                {listings.page < listings.pages && (
+                  <Link
+                    href={qs({ page: String(listings.page + 1) })}
+                    className="rounded-full border border-sandstone bg-surface px-4 py-2 text-body font-bold hover:border-terracotta hover:text-terracotta-deep transition"
+                  >
+                    More →
+                  </Link>
+                )}
+              </nav>
+            )}
+          </>
         )}
       </Shell>
     </>

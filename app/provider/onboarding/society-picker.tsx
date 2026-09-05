@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { proposeSociety } from "../actions";
 import { Field, inputClass } from "@/components/ui";
 import { MapPin } from "@/components/icons";
+import { NEAR_KM, nearest } from "@/lib/geo";
 
 export type SocietyOption = {
   id: string;
@@ -13,19 +14,6 @@ export type SocietyOption = {
   lng?: number | null;
 };
 
-/** Great-circle distance in km. Good to a few metres at this scale, and short
- *  enough to read — a society two streets away and one twenty minutes away are
- *  never a close call. */
-function km(aLat: number, aLng: number, bLat: number, bLng: number) {
-  const R = 6371;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 
 /**
  * Which society, asked in a way that gets answered.
@@ -87,22 +75,15 @@ export default function SocietyPicker({
     setState("asking");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        let best: { s: SocietyOption; d: number } | null = null;
-        for (const s of locatable) {
-          const d = km(pos.coords.latitude, pos.coords.longitude, s.lat!, s.lng!);
-          if (!best || d < best.d) best = { s, d };
-        }
+        const best = nearest(locatable, pos.coords.latitude, pos.coords.longitude);
         if (!best) return setState("failed");
 
-        // Beyond 3km, "nearest" stops meaning "yours". Preselecting a society
-        // across the city would be worse than preselecting nothing, because a
-        // wrong answer already filled in is the one nobody re-reads.
-        if (best.d > 3) {
-          setGuess(best.s.name);
+        if (best.distance > NEAR_KM) {
+          setGuess(best.item.name);
           return setState("far");
         }
-        setValue(best.s.id);
-        setGuess(best.s.name);
+        setValue(best.item.id);
+        setGuess(best.item.name);
         setState("done");
       },
       () => setState("failed"),
