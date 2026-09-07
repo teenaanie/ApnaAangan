@@ -306,9 +306,18 @@ export async function setAvailability(
     return { error: "Tick the box to confirm you want to close your listing." };
 
   const supabase = await createClient();
+
+  /* Whose availability. An administrator on somebody else's listings screen
+     passes their id; the database checks is_admin() and refuses anybody else,
+     so this is a convenience, not the security. Without it the function
+     resolved the provider from the signed-in account and an administrator
+     ended up pausing their own listing. */
+  const asProvider = String(formData.get("as") || "") || null;
+
   const { data, error } = await supabase.rpc("set_my_availability", {
     p_status: status,
     p_note: note || null,
+    p_provider_id: asProvider,
   });
   if (error) return { error: error.message };
 

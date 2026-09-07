@@ -139,6 +139,10 @@ stop and fix it before anything else on this page.
 | L20e | A listing with no note never grows one | **R** |
 | L21 | Photos upload, are resized, and wait for moderation | manual |
 | L22 | Pausing one listing leaves the others alone | manual |
+| L22a | "Pause everything" takes the provider out of the directory | **R** |
+| L22b | An **administrator** pressing it on somebody else's screen pauses THEIR listing | **R** |
+| L22c | ...and not the administrator's own | **R** |
+| L22d | Resuming brings it back | **R** |
 
 ### Requests and their number
 

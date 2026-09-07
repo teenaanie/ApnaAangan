@@ -491,6 +491,7 @@ export default async function ListingsPage({
               liveListings={liveCount}
               totalListings={listings.length}
               pausedListings={listings.filter((l) => l.paused_at).length}
+              asProvider={managing ? provider.id : undefined}
             />
           </div>
 

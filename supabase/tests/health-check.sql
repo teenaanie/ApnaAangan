@@ -44,6 +44,7 @@ fn(sig, since) as (values
   ('request_booking(text,uuid,text,text,text,text,text,text)',      '0027'),
   ('update_my_listing(uuid,text,text,uuid,integer,text,text,text,text[])', '0031'),
   ('set_listing_paused(uuid,boolean)',                              '0012'),
+  ('set_my_availability(text,text,uuid)',                            '0041'),
   ('archive_my_listing(uuid)',                                      '0011'),
   ('billing_enabled()',                                             '0020'),
   ('lead_fee_for_listing(uuid)',                                    '0003'),
@@ -266,11 +267,12 @@ with fn(sig) as (values
   ('admin_update_provider(uuid,text,text,uuid,text,text)'),
   ('accept_terms_with_token(text,text)'),
   ('publish_first_listing_note()'),
+  ('set_my_availability(text,text,uuid)'),
   ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean,text)')
 )
 select
   case when count(*) filter (where to_regprocedure(sig) is null) = 0
-       then 'Every migration up to 0040 is present on this database.'
+       then 'Every migration up to 0041 is present on this database.'
        else count(*) filter (where to_regprocedure(sig) is null)
             || ' migration(s) have NOT been run here — see the FAIL rows above.'
   end as summary

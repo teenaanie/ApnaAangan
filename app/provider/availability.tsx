@@ -28,11 +28,16 @@ export default function Availability({
   totalListings,
   pausedListings,
   summary = false,
+  asProvider,
 }: {
   status: string;
   liveListings: number;
   totalListings: number;
   pausedListings: number;
+  /** Set when an administrator is managing somebody else's listings. Without
+   *  it the database resolves "whose availability" from the signed-in account,
+   *  which for an administrator is the wrong person — see migration 0041. */
+  asProvider?: string;
   /**
    * On the dashboard this is a read-out, not a control.
    *
@@ -121,6 +126,7 @@ export default function Availability({
         </div>
 
         <form action={action} className="shrink-0">
+          {asProvider && <input type="hidden" name="as" value={asProvider} />}
           <input type="hidden" name="status" value={paused ? "active" : "paused"} />
           {!paused && (
             <input
@@ -152,6 +158,7 @@ export default function Availability({
           </button>
         ) : (
           <form action={action}>
+            {asProvider && <input type="hidden" name="as" value={asProvider} />}
             <input type="hidden" name="status" value="closed" />
             <p className="text-body text-charcoal-soft leading-relaxed mb-3">
               Closing removes you from the directory permanently. Your past

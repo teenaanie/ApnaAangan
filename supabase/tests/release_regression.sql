@@ -36,6 +36,10 @@
 --      non-administrator does may produce an APPROVED society, and merging a
 --      duplicate must carry everybody across before deleting the row.
 --
+--   7. PAUSING (0041) — "Pause everything" pressed by an administrator on
+--      somebody else's screen. It paused the administrator's own listing, with
+--      a success message, while the one they were looking at stayed live.
+--
 --   6. THE LISTING NOTE (0039, 0040) — "anything else neighbours should know",
 --      which was written, saved, moderated and then never published. The fix
 --      has to publish a FIRST note without publishing an unreviewed later
@@ -687,6 +691,91 @@ begin
   end;
 
   raise notice '--- LISTING NOTE CHECKS PASSED ---';
+end $$;
+
+-- ============================================ 7 · PAUSING SOMEBODY'S LISTING ==
+-- The administrator presses "Pause everything" on somebody else's screen. Two
+-- things have to be true and only the first is obvious: the right listing goes,
+-- and the administrator's own listing does not.
+do $$
+declare
+  u_admin uuid := gen_random_uuid();
+  u_prov  uuid := gen_random_uuid();
+  loc uuid; cat uuid; theirs uuid; mine uuid; res jsonb; n int; st text;
+begin
+  insert into auth.users (id, email) values
+    (u_admin, 'pause-admin@test'), (u_prov, 'pause-prov@test');
+  insert into profiles (id, email, full_name, role) values
+    (u_admin, 'pause-admin@test', 'Admin', 'admin'),
+    (u_prov,  'pause-prov@test',  'Prov',  'provider')
+    on conflict (id) do update set role = excluded.role;
+
+  select id into loc from localities where status = 'approved' limit 1;
+  select id into cat from categories limit 1;
+
+  insert into providers (user_id, display_name, locality_id, status,
+                         terms_version, terms_accepted_at)
+    values (u_prov, 'Their Listing', loc, 'active', '2026-09-v1', now())
+    returning id into theirs;
+  insert into listings (provider_id, category_id, title, status, first_approved_at)
+    values (theirs, cat, 'Their cakes', 'approved', now());
+
+  -- The administrator has a listing of her own. This is the case that made the
+  -- original bug dangerous rather than merely broken.
+  insert into providers (user_id, display_name, locality_id, status,
+                         terms_version, terms_accepted_at)
+    values (u_admin, 'My Own Listing', loc, 'active', '2026-09-v1', now())
+    returning id into mine;
+  insert into listings (provider_id, category_id, title, status, first_approved_at)
+    values (mine, cat, 'My own work', 'approved', now());
+
+  perform test_as(u_admin);
+  res := set_my_availability('paused', null, theirs);
+  perform test_god();
+  if not (res->>'ok')::boolean then
+    raise exception 'FAIL: an administrator could not pause a listing: %', res;
+  end if;
+
+  select status::text into st from providers where id = theirs;
+  if st <> 'paused' then
+    raise exception 'FAIL: their listing is still %', st;
+  end if;
+  select count(*) into n from listing_cards where provider_id = theirs;
+  if n <> 0 then
+    raise exception 'FAIL: a paused listing is still in the directory';
+  end if;
+  raise notice 'PASS: pausing as an administrator pauses THEIR listing and it leaves the directory';
+
+  if (select status::text from providers where id = mine) <> 'active' then
+    raise exception 'FAIL: it paused the administrator''s own listing instead';
+  end if;
+  raise notice 'PASS: the administrator''s own listing is untouched';
+
+  perform test_as(u_admin);
+  perform set_my_availability('active', null, theirs);
+  perform test_god();
+  if (select count(*) from listing_cards where provider_id = theirs) <> 1 then
+    raise exception 'FAIL: resuming did not bring it back';
+  end if;
+  raise notice 'PASS: resuming brings it back into the directory';
+
+  perform test_as(u_prov);
+  res := set_my_availability('paused', null, mine);
+  perform test_god();
+  if (res->>'ok')::boolean then
+    raise exception 'FAIL: a provider paused somebody else''s listing';
+  end if;
+  raise notice 'PASS: a provider cannot pause anybody but themselves';
+
+  perform test_as(u_prov);
+  res := set_my_availability('paused');
+  perform test_god();
+  if not (res->>'ok')::boolean then
+    raise exception 'FAIL: a provider can no longer pause their own: %', res;
+  end if;
+  raise notice 'PASS: a provider pausing their own still works, unchanged';
+
+  raise notice '--- PAUSE CHECKS PASSED ---';
 end $$;
 
 do $$ begin raise notice '=== ALL RELEASE REGRESSION CHECKS PASSED ==='; end $$;
