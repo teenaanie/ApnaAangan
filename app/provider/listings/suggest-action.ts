@@ -2,11 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCategories } from "@/lib/data";
-import { aiConfigured, draftListing, type Picture, type Suggestion } from "@/lib/ai";
+import { aiConfigured, draftListing, type Draft, type Picture } from "@/lib/ai";
 
 export type SuggestState = {
   error?: string;
-  suggestion?: Suggestion;
+  /** Two versions of the same listing — plain, and with more colour. */
+  draft?: Draft;
   /** Echoed back so the panel can keep what they typed after a failure. */
   what?: string;
   /** Whether a picture was read, so the panel can say so. */
@@ -97,19 +98,18 @@ export async function suggestListing(input: {
         }
       : undefined;
 
-    const suggestion = await draftListing(
+    const draft = await draftListing(
       what,
       categories.map((c) => ({ slug: c.slug, label: c.label })),
       picture
     );
-    if (!suggestion) return { error: "Suggestions are not switched on.", what };
+    if (!draft) return { error: "Suggestions are not switched on.", what };
 
-    await supabase.rpc("ai_draft_finish", {
-      p_id: res.id,
-      p_output: suggestion,
-    });
+    // Both versions are recorded, not only the one they took. Which of the two
+    // people actually choose is the thing worth knowing in a month.
+    await supabase.rpc("ai_draft_finish", { p_id: res.id, p_output: draft });
 
-    return { suggestion, what, fromPoster: Boolean(file) };
+    return { draft, what, fromPoster: Boolean(file) };
   } catch (err) {
     // The attempt is already on the record with an empty output, which is the
     // signal worth having. The person gets a plain sentence and their own

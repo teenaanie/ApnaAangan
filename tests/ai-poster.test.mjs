@@ -31,7 +31,13 @@ const CATEGORIES = [
   { slug: "home", label: "Home Services" },
 ];
 
-const draft = (o) => parseDraft(JSON.stringify(o), CATEGORIES);
+/* The model is asked for two versions of the same listing. Most of the checks
+   below care only that a given answer is cleaned, so they feed the same object
+   into both slots and read the plain one back. The ones that care about the
+   difference say so. */
+const both = (plain, vivid = plain) =>
+  parseDraft(JSON.stringify({ plain, vivid }), CATEGORIES);
+const draft = (o) => both(o).plain;
 
 /* ------------------------------------------------------------------ Monaz -- */
 
@@ -202,11 +208,12 @@ test("keywords are lowercased, de-duplicated and capped at ten", () => {
 
 test("a fenced answer is still read", () => {
   const d = parseDraft(
-    'Here you go:\n```json\n{"title":"Yoga classes","description":"Mornings and evenings.","keywords":["yoga"],"category_slug":"beauty"}\n```\nHope that helps.',
+    'Here you go:\n```json\n{"plain":{"title":"Yoga classes","description":"Mornings and evenings.","keywords":["yoga"],"category_slug":"beauty"},"vivid":{"title":"Yoga, before the day starts","description":"Mornings and evenings.","keywords":["yoga"],"category_slug":"beauty"}}\n```\nHope that helps.',
     CATEGORIES
   );
-  assert.equal(d.title, "Yoga classes");
-  assert.equal(d.category_slug, "beauty");
+  assert.equal(d.plain.title, "Yoga classes");
+  assert.equal(d.vivid.title, "Yoga, before the day starts");
+  assert.equal(d.plain.category_slug, "beauty");
 });
 
 test("an answer that is not JSON at all fails honestly", () => {
@@ -217,9 +224,100 @@ test("an answer that is not JSON at all fails honestly", () => {
 });
 
 test("missing fields come back empty rather than undefined", () => {
-  const d = parseDraft("{}", CATEGORIES);
+  const d = parseDraft("{}", CATEGORIES).plain;
   assert.equal(d.title, "");
   assert.equal(d.description, "");
   assert.deepEqual(d.keywords, []);
   assert.equal(d.category_slug, null);
+});
+
+/* ------------------------------------------------------ the two versions -- */
+
+test("the vivid version is scrubbed exactly as hard as the plain one", () => {
+  // This is the half that matters. The model has been told to make this one
+  // appealing, and "starts at just Rs150, call 7030477441" is what appealing
+  // looks like to a model. Being the nicer-sounding version is not a licence.
+  const d = both(
+    {
+      title: "Yoga classes",
+      description: "Group yoga at the club house. Mornings and evenings.",
+      keywords: ["yoga"],
+      category_slug: "beauty",
+    },
+    {
+      title: "Breathe. Stretch. ₹500 a month.",
+      description:
+        "The room is quiet at half past seven and the mats are already down. Come as you are. Call 7030477441 to start, just ₹500 a month.",
+      keywords: ["yoga", "call 7030477441"],
+      category_slug: "beauty",
+    }
+  );
+
+  const everything = [d.vivid.title, d.vivid.description, ...d.vivid.keywords].join(" ");
+  assert.ok(!/7030477441/.test(everything), `phone survived the vivid version: ${everything}`);
+  assert.ok(!/₹|500/.test(everything), `a price survived the vivid version: ${everything}`);
+  // And the sentence that carried them goes, leaving the part worth keeping.
+  assert.ok(d.vivid.description.includes("mats are already down"), d.vivid.description);
+  // A title is short enough that a stump is glaring: "Breathe. Stretch. ₹500 a
+  // month." must not become "Breathe. Stretch. a month."
+  assert.equal(d.vivid.title, "Breathe. Stretch.");
+});
+
+test("a title that was nothing but a price borrows the plain one", () => {
+  const d = both(
+    {
+      title: "Home-baked eggless cakes",
+      description: "Cakes to order, two days' notice.",
+      keywords: ["cake"],
+      category_slug: "food",
+    },
+    {
+      title: "Cakes from ₹450",
+      description: "Chocolate, still warm, on a Friday afternoon.",
+      keywords: ["cake"],
+      category_slug: "food",
+    }
+  );
+  assert.ok(!/450/.test(d.vivid.title), d.vivid.title);
+  assert.equal(d.vivid.title, "Home-baked eggless cakes");
+  // The description it wrote is kept — only the broken heading was replaced.
+  assert.ok(d.vivid.description.includes("still warm"), d.vivid.description);
+});
+
+test("the vivid version cannot invent a category or its own search words", () => {
+  const d = both(
+    {
+      title: "Tiffin service",
+      description: "Home-cooked lunch, delivered.",
+      keywords: ["tiffin", "dabba"],
+      category_slug: "food",
+    },
+    {
+      title: "Lunch, the way it is made at home",
+      description: "Hot dabba at your door by one o'clock.",
+      keywords: ["gourmet", "michelin", "best in pune"],
+      category_slug: "learn",
+    }
+  );
+  // Keywords and category are facts, not telling. Both come from the plain one
+  // whatever the vivid one claims.
+  assert.deepEqual(d.vivid.keywords, d.plain.keywords);
+  assert.equal(d.vivid.category_slug, "food");
+});
+
+test("only one usable version still leaves the person two cards to look at", () => {
+  const d = parseDraft(
+    JSON.stringify({
+      plain: {
+        title: "Stitching and alterations",
+        description: "Blouses, falls, simple alterations.",
+        keywords: ["silai", "stitching"],
+        category_slug: null,
+      },
+      vivid: {},
+    }),
+    CATEGORIES
+  );
+  assert.equal(d.vivid.title, "Stitching and alterations");
+  assert.equal(d.vivid.description, d.plain.description);
 });

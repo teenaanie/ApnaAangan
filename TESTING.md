@@ -29,7 +29,7 @@ are done.
 ```bash
 npm run smoke -- https://staging.apnaaangan.com
 npm run smoke -- https://apnaaangan.com
-npm run test:ai                    # 13 checks, no network, no API key
+npm run test:ai                    # 17 checks, no network, no API key
 ```
 
 `test:ai` is the one that keeps a phone number off a public page. Run it after

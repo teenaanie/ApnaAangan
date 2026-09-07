@@ -14,7 +14,7 @@ it again:
 | **H** | `supabase/tests/health-check.sql` — did the migrations land | paste into the Supabase SQL editor |
 | **R** | `supabase/tests/release_regression.sql` — the rules, in a real database | `psql "$SCRATCH_DB" -f …` |
 | **B** | `supabase/tests/rls_and_billing.sql` — privacy and money | `psql "$SCRATCH_DB" -f …` |
-| **A** | `tests/ai-poster.test.mjs` — what must not survive a poster | `npm run test:ai` |
+| **A** | `tests/ai-poster.test.mjs` — what must not survive a draft | `npm run test:ai` |
 
 **Manual** means a person opens the site and looks. The manual list is
 deliberately short and ordered by what breaks most often — see
@@ -121,7 +121,12 @@ stop and fix it before anything else on this page.
 | L14c | The sentence that carried the number goes with it — no "Contact to join" stumps | **A** |
 | L14d | A price printed on the poster is not copied into the words | **A** |
 | L14e | The picture is not kept — it is read once and forgotten | manual |
-| L15 | Pressing "Use this" fills the form and everything stays editable | manual |
+| L15 | Pressing "Use this one" fills the form and everything stays editable | manual |
+| L15a | **Two versions come back** — "Simple" and "With more character" — side by side | manual |
+| L15b | They say the same true things; only the telling differs | manual — read a few |
+| L15c | The vivid one is scrubbed as hard: no price, no phone number, no stump in the title | **A** |
+| L15d | The vivid one cannot introduce its own category or search words | **A** |
+| L15e | If only one version comes back, both cards still read sensibly | **A** |
 | L16 | The sixteenth draft in an hour is refused | **R** |
 | L17 | Nobody can read anybody else's drafts | **R** |
 | L18 | Editing an approved listing sends it back for review, and the old wording is kept so you can compare | manual |

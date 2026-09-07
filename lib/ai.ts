@@ -25,6 +25,14 @@
  *   * CATEGORIES IT INVENTED. Only a slug from the real list is accepted.
  */
 
+/** Two ways of saying the same true things. The person picks. */
+export type Draft = {
+  /** Plain and factual. What the feature has always produced. */
+  plain: Suggestion;
+  /** The same facts with more colour in them. Never more facts. */
+  vivid: Suggestion;
+};
+
 export type Suggestion = {
   title: string;
   description: string;
@@ -236,13 +244,22 @@ const SYSTEM = `You help someone list their small home business on Apna Aangan, 
 
 Write their listing for them, in English, in the voice of the person offering the service — "I", not "we", and never third person.
 
-WRITING THE DESCRIPTION
+WRITE IT TWICE
 
-Make a neighbour want to read it. That comes from being specific, not from being decorated: the one concrete detail that makes the thing real — how long the dough sits, which festival she is busiest for, that the class is in the club house and beginners turn up in their pyjamas. One detail like that is worth five adjectives.
+People are different, and so are the things they sell. Somebody hiring a tutor wants plain facts; somebody choosing a cake wants to be able to picture it. So write two versions of the same listing and let the person choose. Same facts in both. Only the telling changes.
 
-Open with the thing itself rather than with "I offer" or "I provide". Vary the sentence lengths so it does not read like a form. It is fine to sound like somebody who enjoys their work, and it is fine to be a little warm.
+PLAIN — what it is, said clearly.
+Short sentences. The concrete details and nothing else: what they make, when they are available, what a neighbour needs to know before asking. No adjectives that are not doing work. This is the one somebody in a hurry can read in five seconds.
 
-But never advertising. No "delicious", "premium", "best in Pune", "authentic", "passion", "delight", "elevate", "unleash", "journey", "one-stop". Those are what people write when they have nothing specific to say, and a neighbour reads straight through them. Trust the detail.
+VIVID — the same thing, with colour in it.
+Now you may write. Open with something worth reading. Use the senses when there is something to sense — what it smells like on a Friday morning, the weight of a good rolling pin, the quiet of a 7am class. Vary the rhythm; a short fragment is fine. Sound like a person who likes their work and wants you to try it.
+
+What VIVID still may not do:
+- Invent. Not one fact, not one claim, not one adjective that asserts a quality nobody mentioned. Colour comes from how their real work is described, never from adding to it. "Fresh out of the oven on Friday morning" is fine if they bake on Fridays; "award-winning" is not, ever.
+- Reach for the empty words. "Best in Pune", "one-stop", "unleash", "elevate", "world-class", "unmatched", "take your X to the next level". A neighbour reads straight past those, and they are what people write when they have nothing real to say. You have something real to say — say that instead.
+- Get long. Still under 450 characters. Flourish is not length.
+
+Both versions: open with the thing itself rather than "I offer" or "I provide", and both in the voice of the person, "I", never third person.
 
 Rules you must not break:
 - Use ONLY what they told you, or what their poster says. Do not add certifications, licences, FSSAI registration, years of experience, awards, hygiene claims, delivery areas, or anything about quality that is not there. Being warm is not permission to invent.
@@ -252,11 +269,21 @@ Rules you must not break:
 
 Return ONLY a JSON object, no other text, with exactly these keys:
 {
-  "title": "under 60 characters, what the thing is, not a slogan",
-  "description": "2-4 short sentences, under 450 characters",
-  "keywords": ["up to 10 words a neighbour might search"],
-  "category_slug": "one slug from the list given, or null"
+  "plain": {
+    "title": "under 60 characters, what the thing is, not a slogan",
+    "description": "2-4 short sentences, under 450 characters",
+    "keywords": ["up to 10 words a neighbour might search"],
+    "category_slug": "one slug from the list given, or null"
+  },
+  "vivid": {
+    "title": "under 60 characters — may have more character than the plain one",
+    "description": "2-4 sentences, under 450 characters",
+    "keywords": ["the same search words — these are not for reading"],
+    "category_slug": "the same slug"
+  }
 }
+
+The keywords and the category are the same in both. They are not read by anybody; they only make the listing findable, and the facts have not changed.
 
 For keywords, include the words they would actually be searched by in this neighbourhood, including the Hindi/Marathi word transliterated in Latin letters where there is a common one — "silai" alongside "stitching", "dabba" and "tiffin", "ghar ka khana". These are never shown to anyone; they only make the listing findable.`;
 
@@ -343,6 +370,20 @@ function cleanProse(s: unknown, max: number): string {
 }
 
 /**
+ * A title, which is short enough that a stump is glaring.
+ *
+ * "Breathe. Stretch. ₹500 a month." becomes "Breathe. Stretch. a month." if
+ * only the digits go, which is worse than either the original or nothing. So a
+ * title gets the same sentence-level treatment as the description — and when a
+ * title is a single phrase with a price welded into it, dropping the sentence
+ * leaves nothing at all, which the caller handles by falling back to the other
+ * version's title rather than showing an empty card.
+ */
+function cleanTitle(s: unknown): string {
+  return cleanProse(s, 60);
+}
+
+/**
  * Ask for a draft. Returns null when there is no key configured, which is a
  * normal state — the feature is optional and the button is simply not shown.
  * Throws on a real failure so the caller can say something honest.
@@ -351,7 +392,7 @@ export async function draftListing(
   what: string,
   categories: { slug: string; label: string }[],
   picture?: Picture
-): Promise<Suggestion | null> {
+): Promise<Draft | null> {
   const p = provider();
   if (!p) return null;
 
@@ -386,7 +427,7 @@ export async function draftListing(
 export function parseDraft(
   text: string,
   categories: { slug: string; label: string }[]
-): Suggestion {
+): Draft {
   // Two of the three services can be asked for JSON directly, and all three
   // still sometimes wrap it in a fence. Take the outermost object rather than
   // failing on a stray backtick.
@@ -394,13 +435,44 @@ export function parseDraft(
   const end = text.lastIndexOf("}");
   if (start === -1 || end <= start) throw new Error("Could not read that suggestion.");
 
-  let parsed: Record<string, unknown>;
+  let outer: Record<string, unknown>;
   try {
-    parsed = JSON.parse(text.slice(start, end + 1));
+    outer = JSON.parse(text.slice(start, end + 1));
   } catch {
     throw new Error("Could not read that suggestion.");
   }
 
+  /* Both halves go through exactly the same cleaning, and that is the point of
+     doing it here rather than trusting the prompt. The vivid one is where a
+     rupee figure or an invented credential is most likely to arrive: it is the
+     version the model has been told to make appealing, and "starts at just
+     ₹150" is what appealing looks like to a model. It gets scrubbed as hard as
+     the plain one, and its keywords and category are taken from the plain one
+     regardless of what it says, because those are facts and only the telling
+     was supposed to change. */
+  const plain = one(outer.plain, categories);
+  const vivid = one(outer.vivid, categories);
+
+  /* Field by field, not all or nothing. A vivid title that was entirely a
+     price — "Yoga, ₹500 a month" — comes back empty once the scrubber has
+     finished, and an empty heading over a good paragraph is worse than
+     borrowing the plain heading. */
+  return {
+    plain,
+    vivid: {
+      title: vivid.title || plain.title,
+      description: vivid.description || plain.description,
+      keywords: plain.keywords,
+      category_slug: plain.category_slug,
+    },
+  };
+}
+
+function one(
+  raw: unknown,
+  categories: { slug: string; label: string }[]
+): Suggestion {
+  const parsed = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const allowed = new Set(categories.map((c) => c.slug));
   const slug = typeof parsed.category_slug === "string" ? parsed.category_slug : null;
 
@@ -420,7 +492,7 @@ export function parseDraft(
     : [];
 
   return {
-    title: clean(parsed.title, 60),
+    title: cleanTitle(parsed.title),
     description: cleanProse(parsed.description, 450),
     keywords,
     category_slug: slug && allowed.has(slug) ? slug : null,

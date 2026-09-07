@@ -134,10 +134,24 @@ export default function SuggestListing({
     );
   }
 
-  const s = state.suggestion;
-  const category = s?.category_slug
-    ? categories.find((c) => c.slug === s.category_slug)
+  const draft = state.draft;
+  /* Both versions carry the same category and the same search words — only the
+     telling differs — so it is looked up once. */
+  const category = draft?.plain.category_slug
+    ? categories.find((c) => c.slug === draft.plain.category_slug)
     : undefined;
+
+  function apply(pick: { title: string; description: string; keywords: string[] }) {
+    onApply({
+      title: pick.title,
+      description: pick.description,
+      keywords: pick.keywords.join(", "),
+      categoryId: category?.id ?? "",
+    });
+    setUsed(true);
+    setOpen(false);
+    clearPoster();
+  }
 
   return (
     <Card className="p-4 mb-5 bg-mustard-tint border-mustard/25">
@@ -244,7 +258,7 @@ export default function SuggestListing({
               ? poster
                 ? "Reading it…"
                 : "Writing…"
-              : s
+              : draft
                 ? "Try again"
                 : poster
                   ? "Read it and write the listing"
@@ -259,49 +273,75 @@ export default function SuggestListing({
         </div>
       </div>
 
-      {s && (
+      {draft && (
         <div className="mt-4 pt-4 border-t border-mustard/25">
-          <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-2">
-            {state.fromPoster ? "Read off your poster — how does this sound?" : "How does this sound?"}
+          <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0 mb-2.5">
+            {state.fromPoster
+              ? "Read off your poster — two ways of saying it"
+              : "Two ways of saying it"}
           </p>
 
-          <p className="text-body font-bold m-0">{s.title}</p>
-          <p className="text-body text-charcoal-soft m-0 mt-1">{s.description}</p>
+          {/* Both, side by side on a laptop and stacked on a phone.
+              Shown together rather than behind a toggle, because the choice is
+              only obvious when you can read one against the other — and
+              because somebody who did not know there was a second version
+              would never go looking for it. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              {
+                key: "plain" as const,
+                label: "Simple",
+                note: "Says what it is and stops.",
+                pick: draft.plain,
+              },
+              {
+                key: "vivid" as const,
+                label: "With more character",
+                note: "The same facts, told with a bit more colour.",
+                pick: draft.vivid,
+              },
+            ]).map(({ key, label, note, pick }) => (
+              <div
+                key={key}
+                className="rounded-2xl border border-sandstone bg-surface p-3.5 flex flex-col"
+              >
+                <p className="text-caption uppercase tracking-wider font-bold text-charcoal-faint m-0">
+                  {label}
+                </p>
+                <p className="text-caption text-charcoal-faint m-0 mb-2.5 leading-snug">
+                  {note}
+                </p>
+
+                <p className="text-body font-bold m-0">{pick.title}</p>
+                <p className="text-body text-charcoal-soft m-0 mt-1 leading-snug flex-1">
+                  {pick.description}
+                </p>
+
+                <div className="mt-3">
+                  <Button type="button" variant="sage" onClick={() => apply(pick)}>
+                    Use this one
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {category && (
-            <p className="text-caption text-charcoal-soft m-0 mt-2">
+            <p className="text-caption text-charcoal-soft m-0 mt-3">
               Category: <b className="text-charcoal">{category.label}</b>
             </p>
           )}
-          {s.keywords.length > 0 && (
+          {draft.plain.keywords.length > 0 && (
             <p className="text-caption text-charcoal-faint m-0 mt-1 leading-snug">
-              Search words: {s.keywords.join(", ")}
+              Search words: {draft.plain.keywords.join(", ")}
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-2.5 mt-3.5">
-            <Button
-              type="button"
-              variant="sage"
-              onClick={() => {
-                onApply({
-                  title: s.title,
-                  description: s.description,
-                  keywords: s.keywords.join(", "),
-                  categoryId: category?.id ?? "",
-                });
-                setUsed(true);
-                setOpen(false);
-                clearPoster();
-              }}
-            >
-              Use this
-            </Button>
-            {used && (
-              <span className="text-caption text-sage-deep">
-                Filled in below — change anything you like.
-              </span>
-            )}
-          </div>
+          {used && (
+            <p className="text-caption text-sage-deep m-0 mt-2">
+              Filled in below — change anything you like.
+            </p>
+          )}
 
           <p className="text-caption text-charcoal-faint mt-3 mb-0 leading-snug">
             Read it before you save. It only knows what you just told it, so if
