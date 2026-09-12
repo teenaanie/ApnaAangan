@@ -21,6 +21,11 @@ session, ask for it by name before starting — do not silently fall back to zip
 
 Working branch is `staging`. Commit only when asked.
 
+**Start by reading [HANDOFF.md](HANDOFF.md).** It is the state of play — how this
+actually deploys (production does *not* serve `main`), which migrations may still be
+outstanding, the test stack, the mistakes that have already cost a day each, and what
+is waiting on a decision. This file is the rules; that one is the situation.
+
 ## Standing rules for this codebase
 
 - **Business rules live in the database, not the app.** RLS for privacy, triggers for
