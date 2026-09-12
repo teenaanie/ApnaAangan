@@ -39,11 +39,6 @@ function explain(raw: string): { message: string; hint: string } {
       message: "That email and password don't match an account.",
       hint: "If you haven't created one yet, switch to Create account below.",
     };
-  if (/already registered|already exists/i.test(raw))
-    return {
-      message: "There's already an account with that email.",
-      hint: "Switch to Sign in.",
-    };
   if (/email not confirmed/i.test(raw))
     return {
       message: "This account has not been confirmed yet.",
@@ -78,11 +73,14 @@ export default function LoginForm() {
 
   async function resend() {
     const supabase = createClient();
-    const { error } = await supabase.auth.resend({
-      type: "signup",
+    // Passwordless signup never confirms separately from signing in — "send
+    // it again" is just asking for another magic link, the same call as the
+    // original request.
+    const { error } = await supabase.auth.signInWithOtp({
       email: awaiting || email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/provider/onboarding`,
+        shouldCreateUser: true,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
     if (error) {
@@ -112,29 +110,26 @@ export default function LoginForm() {
 
     try {
       if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
+        // Passwordless: one email, one click. It both confirms the address
+        // and signs them in — there is no separate "now log in" step, and
+        // nothing to invent or forget. If the address already has a
+        // password-based account, Supabase quietly signs that account in
+        // instead of erroring, which is the right fallback rather than a
+        // "which email did I use" dead end.
+        const { error } = await supabase.auth.signInWithOtp({
           email,
-          password,
-          options: { data: { full_name: name } },
+          options: {
+            shouldCreateUser: true,
+            data: { full_name: name },
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          },
         });
         if (error) {
           const x = explain(error.message);
           setError(x.message);
           setHint(x.hint);
-        } else if (data.user && (data.user.identities?.length ?? 0) === 0) {
-          // Supabase returns a decoy user with no identities when the email is
-          // already registered, so as not to reveal who has an account. Nothing
-          // is created, and without this check it looks like silent success.
-          setError("There is already an account with this email.");
-          setHint("Switch to Sign in above, or use Forgot password if you cannot remember it.");
-        } else if (!data.session) {
-          // Confirmation is on. Nothing is wrong — say so plainly, because a
-          // form that goes quiet after "Create account" reads as a failure and
-          // the obvious response is to try again with a different address.
-          setAwaiting(email);
         } else {
-          router.push(next);
-          router.refresh();
+          setAwaiting(email);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -245,26 +240,29 @@ export default function LoginForm() {
           />
         </Field>
 
-        <Field label="Password" hint={mode === "signup" ? "six characters or more" : undefined}>
-          <input
-            type="password"
-            required
-            minLength={6}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            className={inputClass}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
+        {/* No password on signup — one email, one click is the whole account. */}
+        {mode === "signin" && (
+          <Field label="Password">
+            <input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="current-password"
+              className={inputClass}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+        )}
 
         <Button type="submit" full disabled={busy} style={busy ? { opacity: 0.95 } : undefined}>
           {busy && <Spinner size={15} />}
           {busy
             ? mode === "signup"
-              ? "Creating…"
+              ? "Sending…"
               : "Signing in…"
             : mode === "signup"
-            ? "Create account"
+            ? "Send me a link"
             : "Sign in"}
         </Button>
 
