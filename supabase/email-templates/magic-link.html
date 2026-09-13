@@ -1,0 +1,48 @@
+<!--
+  Supabase → Authentication → Email Templates → "Magic Link"
+
+  This is the email an EXISTING, already-confirmed address gets when it asks
+  for a sign-in link. A brand-new lister does not see this one — they get
+  "Confirm signup" instead. Both templates have to be changed, or sign-in
+  works for returning providers and silently fails for new ones.
+
+  Same reason as confirm-signup.html for building the link by hand rather than
+  using {{ .ConfirmationURL }}: {{ .TokenHash }} is verified server-side by
+  /auth/callback and does not depend on a cookie from the browser that
+  requested it, so the link survives being opened in a mail app's in-app
+  browser or on another device.
+
+  next=/provider/onboarding is deliberate and safe for everyone: a provider who
+  has already signed up is redirected straight on to /provider by the
+  onboarding page itself (app/provider/onboarding/page.tsx).
+-->
+<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;background:#f8f1e3;padding:28px 26px;color:#333433">
+
+  <p style="font-family:Fraunces,Georgia,'Times New Roman',serif;color:#7a4900;font-size:20px;margin:0 0 4px">
+    <b>Your sign-in link</b>
+  </p>
+  <p style="margin:0 0 20px;color:#8b8c88;font-size:13px">Apna Aangan</p>
+
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Hello,</p>
+
+  <p style="margin:0 0 22px;font-size:15px;line-height:1.6">
+    Open the link below and you are signed in. There is no password to remember.
+  </p>
+
+  <p style="margin:0 0 22px">
+    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/provider/onboarding"
+       style="background:#c86840;color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;display:inline-block;font-size:15px;font-weight:bold">
+      Sign in to Aangan
+    </a>
+  </p>
+
+  <p style="margin:0 0 20px;color:#5e5f5c;font-size:13px;line-height:1.6">
+    If the button does not work, paste this into your browser:<br>
+    <span style="color:#a34f2d;word-break:break-all">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/provider/onboarding</span>
+  </p>
+
+  <p style="margin:0;color:#8b8c88;font-size:12px;line-height:1.6">
+    This link works once, and only for a short while. If you did not ask for it,
+    you can ignore this email — nothing will happen.
+  </p>
+</div>

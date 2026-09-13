@@ -1,0 +1,52 @@
+<!--
+  Supabase → Authentication → Email Templates → "Confirm signup"
+
+  This is the email a lister gets the FIRST time they sign up. It is not the
+  "Magic Link" template — Supabase only sends that one to an address that
+  already exists and is confirmed. Getting these two mixed up is why the
+  first version of passwordless sign-up appeared to work and then did not log
+  anybody in.
+
+  Why the link is built by hand instead of using {{ .ConfirmationURL }}:
+  the default variable routes through Supabase's own verify endpoint, which
+  hands back a PKCE `code`. Exchanging that code needs a cookie set in the
+  browser that ASKED for the link — so it breaks whenever the email is opened
+  somewhere else, which on a phone is most of the time, because mail apps open
+  links in their own in-app browser. {{ .TokenHash }} carries no such
+  requirement: /auth/callback verifies it server-side with verifyOtp and works
+  from any device or app.
+
+  Keep this file and the dashboard in step. The dashboard is the thing that
+  actually sends; this is the copy that can be reviewed and diffed.
+-->
+<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;background:#f8f1e3;padding:28px 26px;color:#333433">
+
+  <p style="font-family:Fraunces,Georgia,'Times New Roman',serif;color:#7a4900;font-size:20px;margin:0 0 4px">
+    <b>Confirm your email address</b>
+  </p>
+  <p style="margin:0 0 20px;color:#8b8c88;font-size:13px">Apna Aangan</p>
+
+  <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Hello,</p>
+
+  <p style="margin:0 0 22px;font-size:15px;line-height:1.6">
+    Open the link below and your account is ready. It is how we know the address
+    is really yours.
+  </p>
+
+  <p style="margin:0 0 22px">
+    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/provider/onboarding"
+       style="background:#c86840;color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;display:inline-block;font-size:15px;font-weight:bold">
+      Confirm and start listing
+    </a>
+  </p>
+
+  <p style="margin:0 0 20px;color:#5e5f5c;font-size:13px;line-height:1.6">
+    If the button does not work, paste this into your browser:<br>
+    <span style="color:#a34f2d;word-break:break-all">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/provider/onboarding</span>
+  </p>
+
+  <p style="margin:0;color:#8b8c88;font-size:12px;line-height:1.6">
+    This link works once, and only for a short while. If you did not ask for it,
+    you can ignore this email — nothing will happen.
+  </p>
+</div>
