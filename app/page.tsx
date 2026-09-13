@@ -2,6 +2,7 @@ import Link from "next/link";
 import Nav from "@/components/nav";
 import SocietySelect from "@/components/society-select";
 import SearchBox from "@/components/search-box";
+import CategoryChips from "@/components/category-chips";
 import { Badge, Card, Empty, Shell } from "@/components/ui";
 import {
   getCategories,
@@ -163,17 +164,17 @@ export default async function Home({
 
         {/* ------------------------------------------------------ categories */}
         {categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto no-bar py-4">
-            <Chip href={qs({ cat: undefined })} on={!sp.cat}>
-              All
-            </Chip>
-            {categories.map((c) => (
-              <Chip key={c.id} href={qs({ cat: c.slug })} on={sp.cat === c.slug}>
-                <CategoryIcon slug={c.slug} emoji={c.icon} size={15} />
-                {c.label}
-              </Chip>
-            ))}
-          </div>
+          <CategoryChips
+            items={categories.map((c) => ({
+              id: c.id,
+              slug: c.slug,
+              label: c.label,
+              icon: c.icon,
+              href: qs({ cat: c.slug }),
+            }))}
+            allHref={qs({ cat: undefined })}
+            activeSlug={sp.cat}
+          />
         )}
 
         {/* ----------------------------------------------------------- grid */}
@@ -275,31 +276,6 @@ export default async function Home({
         )}
       </Shell>
     </>
-  );
-}
-
-function Chip({
-  href,
-  on,
-  children,
-}: {
-  href: string;
-  on: boolean;
-  children: React.ReactNode;
-}) {
-  /* Mustard is the guideline's named colour for active states. Every filter
-     row uses the same one, so "this filter is on" reads identically wherever
-     it appears. */
-  const active = "bg-mustard text-white border-mustard";
-  return (
-    <Link
-      href={href}
-      className={`inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap text-body font-bold px-3.5 py-2 rounded-full border transition ${
-        on ? active : "bg-surface border-sandstone hover:border-terracotta"
-      }`}
-    >
-      {children}
-    </Link>
   );
 }
 
