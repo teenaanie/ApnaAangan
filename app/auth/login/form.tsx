@@ -51,6 +51,27 @@ function explain(raw: string): { message: string; hint: string } {
       message: "Could not reach the server.",
       hint: "Check your connection and try again.",
     };
+  // A magic-link click bounces through /auth/callback, which redirects here
+  // with ?error=<reason> on any failure. The two real-world causes: the link
+  // is opened in a different browser/app than the one that requested it (the
+  // most common case on a phone — mail apps often open links in their own
+  // in-app browser, which doesn't have the cookie the original request set),
+  // or the link has simply gone stale.
+  if (/flow state|code verifier|invalid request/i.test(raw))
+    return {
+      message: "That link only works in the browser you asked for it in.",
+      hint: "If you opened it from a mail app on your phone, try again in Chrome or the same browser you signed up in — or just request a fresh one below.",
+    };
+  if (/expired|otp_expired/i.test(raw))
+    return {
+      message: "That link has expired.",
+      hint: "Links only last a little while — request a new one below.",
+    };
+  if (/no_token/i.test(raw))
+    return {
+      message: "That link didn't work.",
+      hint: "Request a new one below.",
+    };
   return { message: raw, hint: "" };
 }
 
@@ -58,14 +79,19 @@ export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/provider";
+  // /auth/callback redirects here with ?error=<reason> when a magic-link
+  // click fails — read it once on load so the failure is actually visible,
+  // instead of the link just silently bouncing back to a blank form.
+  const callbackError = params.get("error");
+  const initialExplained = callbackError ? explain(decodeURIComponent(callbackError)) : null;
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(callbackError ? "signup" : "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [hint, setHint] = useState("");
+  const [error, setError] = useState(initialExplained?.message ?? "");
+  const [hint, setHint] = useState(initialExplained?.hint ?? "");
   const [notice, setNotice] = useState("");
   /** The address a confirmation was sent to, once one has been. */
   const [awaiting, setAwaiting] = useState("");
