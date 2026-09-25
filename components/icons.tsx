@@ -299,12 +299,34 @@ export const CatHome = (p: IconProps) => (
   </Svg>
 );
 
-export const CatKids = (p: IconProps) => (
+/** Trophy. Slug 'sports' — migration 0043 split it out of the old Kids & Hobbies. */
+export const CatSports = (p: IconProps) => (
   <Svg {...p}>
-    <path d="M12 3.4a8.6 8.6 0 0 0 0 17.2c1.4 0 1.9-1 1.4-1.9-.6-1.1.2-2.3 1.5-2.3h1.5a4.2 4.2 0 0 0 4.2-4.2C20.6 7.2 16.7 3.4 12 3.4Z" />
-    <circle cx="8" cy="9.4" r="0.1" />
-    <circle cx="12" cy="7.6" r="0.1" />
-    <circle cx="16" cy="9.4" r="0.1" />
+    <path d="M7.4 4.4h9.2v4a4.6 4.6 0 0 1-9.2 0v-4Z" />
+    <path d="M7.4 5.8h-2a2 2 0 0 0 2 3.6" />
+    <path d="M16.6 5.8h2a2 2 0 0 1-2 3.6" />
+    <path d="M12 12.4v3" />
+    <path d="M9.4 17.6h5.2l1 2.8H8.4l1-2.8Z" />
+  </Svg>
+);
+
+/** Palette. Slug 'arts' — everything the Sports split left without a home. */
+export const CatArts = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3.4a8.6 8.6 0 1 0 8.6 8.6c0-1-.4-1.6-1.4-1.6h-2a2.6 2.6 0 0 1-2.6-2.6v-.6a1.8 1.8 0 0 0-1.8-1.8h-.8" />
+    <circle cx="8.2" cy="10" r=".9" />
+    <circle cx="9.6" cy="14.4" r=".9" />
+    <circle cx="13.2" cy="15.6" r=".9" />
+    <circle cx="15" cy="7.6" r=".9" />
+  </Svg>
+);
+
+/** Hanger with a garment draped on it. Slug 'clothes'. */
+export const CatClothes = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 7a1.8 1.8 0 1 0-1.8-1.8" />
+    <path d="M12 7v1.8" />
+    <path d="M12 8.8C7 8.8 3.6 12.6 2.6 15.4a1 1 0 0 0 .9 1.3h17a1 1 0 0 0 .9-1.3C20.4 12.6 17 8.8 12 8.8Z" />
   </Svg>
 );
 
@@ -332,7 +354,9 @@ export const CATEGORY_ICONS: Record<string, (p: IconProps) => React.ReactElement
   learn: CatLearn,
   beauty: CatBeauty,
   home: CatHome,
-  kids: CatKids,
+  sports: CatSports,
+  arts: CatArts,
+  clothes: CatClothes,
   pets: CatPets,
   events: CatEvents,
   repair: CatRepair,

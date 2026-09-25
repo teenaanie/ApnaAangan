@@ -48,7 +48,7 @@ export default function SocietyFilter({
     // this page with the same parameter name.
     <form
       action="/admin/providers"
-      className="flex flex-wrap items-center gap-2.5 mb-6"
+      className="flex flex-wrap items-center gap-2.5"
       onSubmit={(e) => e.preventDefault()}
     >
       <label className="flex items-center gap-2.5">

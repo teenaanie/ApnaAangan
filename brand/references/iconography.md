@@ -63,7 +63,11 @@ something the app needs and the sheet does not cover:
 - **Interface**: info, chevron, download, phone, WhatsApp, search, check, pause,
   pencil, map pin, link.
 - **Categories**: one per seeded category — food, classes, beauty, home
-  services, kids, pets, events, repairs. `events` reuses the guideline's gift.
+  services, sports, arts & hobbies, clothes & jewelry, pets, events, repairs.
+  `events` reuses the guideline's gift. Sports, arts & hobbies and clothes &
+  jewelry were added 25 September 2026 when migration 0043 split "Kids &
+  Hobbies" into Sports and Arts & Hobbies and added Clothes & Jewelry as a new
+  category — `kids` is retired, nothing has that slug any more.
 
 Category icons are matched by slug, and the emoji in the database is the
 fallback. That means adding a category from the admin screen never produces a

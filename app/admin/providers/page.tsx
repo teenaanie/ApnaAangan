@@ -8,6 +8,7 @@ import MoneyPanel from "./money-panel";
 import ResendConsent from "./resend-consent";
 import EditProvider from "./edit-provider";
 import SocietyFilter from "./society-filter";
+import ProviderSearch from "./provider-search";
 import { setCreditLimit, setProviderStatus } from "../actions";
 import { Badge, Card, Empty, SectionHeader, Shell, WideShell, inputClass } from "@/components/ui";
 import { SubmitButton } from "@/components/submit";
@@ -49,7 +50,7 @@ const LIVE = new Set(["active", "paused"]);
 export default async function AdminProviders({
   searchParams,
 }: {
-  searchParams: Promise<{ soc?: string }>;
+  searchParams: Promise<{ soc?: string; q?: string }>;
 }) {
   if (!isConfigured()) redirect("/");
   const profile = await getProfile();
@@ -93,11 +94,27 @@ export default async function AdminProviders({
     ...r,
   })) as unknown as Row[];
 
+  // Free-text search narrows the same way `soc` does: everything is already
+  // fetched (no pagination on this page), so this just filters the in-memory
+  // set before grouping. Combines with `soc` as AND — searching within a
+  // society you have already picked, not instead of it.
+  const q = (sp.q ?? "").trim().toLowerCase();
+  const filteredRows = q
+    ? rows.filter((r) => {
+        const phone = phoneOf(r) ?? "";
+        return (
+          r.display_name.toLowerCase().includes(q) ||
+          r.public_id.toLowerCase().includes(q) ||
+          phone.includes(q)
+        );
+      })
+    : rows;
+
   // Group by society. "No society set" is a real bucket, not an error — it is
   // where a provider who skipped the optional field lands, and if it fills up
   // that is a signal the field should not be optional.
   const societies = new Map<string, { name: string; rows: Row[] }>();
-  for (const r of rows) {
+  for (const r of filteredRows) {
     const key = r.localities?.id ?? "none";
     const name = r.localities
       ? `${r.localities.name}${r.localities.area ? ` · ${r.localities.area}` : ""}`
@@ -130,9 +147,18 @@ export default async function AdminProviders({
             </Link>
           </div>
           <p className="text-charcoal-soft text-body mb-6">
-            {rows.length} listed across {groups.length} societ
-            {groups.length === 1 ? "y" : "ies"} · {rupees(owedTotal)} outstanding in
-            total.
+            {q ? (
+              <>
+                {filteredRows.length} match{filteredRows.length === 1 ? "" : "es"} for
+                &ldquo;{sp.q}&rdquo;.
+              </>
+            ) : (
+              <>
+                {rows.length} listed across {groups.length} societ
+                {groups.length === 1 ? "y" : "ies"} · {rupees(owedTotal)} outstanding in
+                total.
+              </>
+            )}
           </p>
 
           {/* Folded away behind a link: creating someone else's listing should
@@ -141,15 +167,22 @@ export default async function AdminProviders({
           <ListForProvider localities={localities} categories={categories} />
 
           {/* ------------------------------------------------------- filters */}
-          <SocietyFilter
-            groups={groups.map(([id, g]) => ({ id, name: g.name, count: g.rows.length }))}
-            value={sp.soc}
-            total={rows.length}
-          />
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <SocietyFilter
+              groups={groups.map(([id, g]) => ({ id, name: g.name, count: g.rows.length }))}
+              value={sp.soc}
+              total={rows.length}
+            />
+            <ProviderSearch q={sp.q} soc={sp.soc} />
+          </div>
 
-          {shown.length === 0 && <Empty title="Nobody here yet">
-              Providers appear under their society as soon as they are approved.
-            </Empty>}
+          {shown.length === 0 && (
+            <Empty title={q ? "No matches" : "Nobody here yet"}>
+              {q
+                ? <>Nothing matches &ldquo;{sp.q}&rdquo;. Try a different name, ID or phone number.</>
+                : "Providers appear under their society as soon as they are approved."}
+            </Empty>
+          )}
 
           {shown.map(([id, g]) => (
             <section key={id} className="mb-9">
