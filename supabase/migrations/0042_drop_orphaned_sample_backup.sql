@@ -1,0 +1,34 @@
+-- ============================================================================
+-- Drop the orphaned sample_backup schema.
+--
+-- Found 16 September 2026 while auditing the live database for a
+-- cross-customer read hole (there wasn't one — see supabase/tests/
+-- rls_and_billing.sql for the resident-isolation proof on `leads`, which is
+-- the actual finding of that audit). What the audit found instead: a
+-- `sample_backup` schema, a full duplicate of 9 production tables (leads,
+-- providers, provider_contacts, settlements, listings, localities,
+-- listing_localities, listing_photos, provider_updates) carrying
+-- real-looking rows — 9 leads, 26 providers, 7 provider_contacts, 1
+-- settlement.
+--
+-- Every one of those tables has row level security switched ON but has NO
+-- POLICIES on it at all. Right now that means default-deny: nothing in
+-- anon or authenticated can read a single row (confirmed — no grants exist
+-- on the schema). But "RLS on, no policy" is not a fix, it is a landmine.
+-- Migration 0005's own comment describes exactly this shape of mistake for
+-- `lead_inbox`: the moment anyone runs a routine grant to restore access,
+-- every signed-in user can read every resident's phone number, and nothing
+-- about an RLS-enabled table with no policy stops that the way an actual
+-- scoped policy would.
+--
+-- No code reads from this schema — grep confirms nothing in the app
+-- references `sample_backup`. It is not tracked by Supabase's migration
+-- history either (list_migrations came back empty for this whole database,
+-- which matches HANDOFF.md's warning that migrations here were pasted into
+-- the SQL editor by hand rather than run through the CLI). There is nothing
+-- to preserve. Drop it.
+--
+-- Re-runnable: `if exists` makes a second run a no-op.
+-- ============================================================================
+
+drop schema if exists sample_backup cascade;

@@ -64,7 +64,8 @@ fn(sig, since) as (values
   ('ai_draft_finish(uuid,jsonb)',                                   '0037'),
   ('propose_society(text,text,text)',                               '0038'),
   ('admin_decide_society(uuid,boolean,uuid)',                       '0038'),
-  ('publish_first_listing_note()',                                  '0039')
+  ('publish_first_listing_note()',                                  '0039'),
+  ('admin_notify_emails()',                                         '0044')
 ),
 fn_check as (
   select 'function' as area, sig as item, since,
@@ -155,6 +156,23 @@ rls_check as (
                        'profiles','settlements','ai_drafts','listing_photos')
 ),
 
+-- ------------------------------------------------------------- orphans ----
+-- sample_backup was a duplicate schema found sitting in production with
+-- real-looking PII and row level security enabled but not one policy on
+-- any of its 9 tables — safe only because nothing grants it to
+-- anon/authenticated today. Migration 0042 drops it; this check makes
+-- sure it stays gone instead of quietly reappearing from some future
+-- backup/restore step.
+orphan_check as (
+  select 'orphan' as area, 'sample_backup schema' as item, '0042' as since,
+         case when not exists (
+           select 1 from pg_namespace where nspname = 'sample_backup'
+         ) then 'PASS' else 'FAIL' end as result,
+         case when exists (
+           select 1 from pg_namespace where nspname = 'sample_backup'
+         ) then 'orphaned PII schema is back — see migration 0042' else '' end as detail
+),
+
 -- ---------------------------------------------------------------- grants ----
 -- A policy decides which ROWS. A grant decides whether the table can be
 -- touched at all. Both must say yes, and forgetting the second is the classic
@@ -201,7 +219,15 @@ privacy_check as (
     ('privacy', 'claim_email unreadable by anon', '0030',
       case when not has_column_privilege('anon','providers','claim_email','select')
            then 'PASS' else 'FAIL' end,
-      'an email address would be public')
+      'an email address would be public'),
+    -- Supabase grants EXECUTE on every new function to anon automatically —
+    -- REVOKE ... FROM PUBLIC does not undo that (0045). Every function that
+    -- returns something sensitive without checking is_admin()/auth.uid()
+    -- internally needs its own explicit revoke, or this is the failure mode.
+    ('privacy', 'admin_notify_emails unreachable by anon', '0045',
+      case when not has_function_privilege('anon','admin_notify_emails()','execute')
+           then 'PASS' else 'FAIL' end,
+      'anyone could read every admin''s email address')
   ) t(area, item, since, result, detail)
 ),
 
@@ -235,7 +261,16 @@ content_check as (
       'nobody can finish signing up without one'),
     ('content', 'at least one category', '—',
       case when exists (select 1 from categories) then 'PASS' else 'FAIL' end,
-      'the listing form would have an empty dropdown')
+      'the listing form would have an empty dropdown'),
+    ('content', 'sports category exists', '0043',
+      case when exists (select 1 from categories where slug = 'sports') then 'PASS' else 'FAIL' end,
+      'Kids & Hobbies was renamed to Sports — the rename did not land'),
+    ('content', 'clothes category exists', '0043',
+      case when exists (select 1 from categories where slug = 'clothes') then 'PASS' else 'FAIL' end,
+      'Clothes & Jewelry was never inserted'),
+    ('content', 'arts category exists', '0046',
+      case when exists (select 1 from categories where slug = 'arts') then 'PASS' else 'FAIL' end,
+      'Arts & Hobbies was never inserted')
   ) t(area, item, since, result, detail)
 ),
 
@@ -244,7 +279,7 @@ all_checks as (
   union all select * from tbl_check     union all select * from trg_check
   union all select * from rls_check     union all select * from grant_check
   union all select * from privacy_check union all select * from con_check
-  union all select * from content_check
+  union all select * from content_check union all select * from orphan_check
 )
 
 select
@@ -268,11 +303,12 @@ with fn(sig) as (values
   ('accept_terms_with_token(text,text)'),
   ('publish_first_listing_note()'),
   ('set_my_availability(text,text,uuid)'),
-  ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean,text)')
+  ('admin_create_provider(text,text,uuid,text,text,text,uuid,integer,text,text,text[],text,text,boolean,text)'),
+  ('admin_notify_emails()')
 )
 select
   case when count(*) filter (where to_regprocedure(sig) is null) = 0
-       then 'Every migration up to 0041 is present on this database.'
+       then 'Every migration up to 0046 is present on this database.'
        else count(*) filter (where to_regprocedure(sig) is null)
             || ' migration(s) have NOT been run here — see the FAIL rows above.'
   end as summary

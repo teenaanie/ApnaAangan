@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { TERMS_VERSION } from "@/lib/terms";
+import { adminApprovalEmail, notifyAdmins } from "@/lib/email";
+import { resolvedSiteUrl } from "@/lib/site";
 
 export type ActionState = {
   error?: string;
@@ -128,6 +130,20 @@ export async function createProvider(
 
   await supabase.from("profiles").update({ role: "provider", phone }).eq("id", user.id);
 
+  // Best-effort: a missing admin address should not stop someone's signup.
+  const { data: admins } = await supabase.rpc("admin_notify_emails");
+  const site = await resolvedSiteUrl();
+  await notifyAdmins(
+    admins,
+    `New provider awaiting approval — ${displayName} · Aangan`,
+    adminApprovalEmail({
+      kind: "New provider signup",
+      name: displayName,
+      detail: title,
+      url: `${site}/admin`,
+    })
+  );
+
   revalidatePath("/provider");
   redirect("/provider?welcome=1");
 }
@@ -224,6 +240,14 @@ export async function addListing(
       p_text: info.slice(0, 600),
     });
   }
+
+  const { data: admins } = await supabase.rpc("admin_notify_emails");
+  const site = await resolvedSiteUrl();
+  await notifyAdmins(
+    admins,
+    `New listing awaiting approval — ${title} · Aangan`,
+    adminApprovalEmail({ kind: "New listing", name: title, url: `${site}/admin` })
+  );
 
   revalidatePath("/provider/listings");
   return {
@@ -544,6 +568,23 @@ export async function proposeSociety(
 
   const res = data as { ok: boolean; id?: string; name?: string; existing?: boolean; error?: string };
   if (!res?.ok) return { ok: false, error: res?.error ?? "Could not add that society." };
+
+  // Only a genuinely new proposal needs a decision — propose_society hands
+  // back `existing: true` when it matched a society already on the list,
+  // pending or approved, and nothing new was created.
+  if (!res.existing) {
+    const { data: admins } = await supabase.rpc("admin_notify_emails");
+    const site = await resolvedSiteUrl();
+    await notifyAdmins(
+      admins,
+      `New society proposed — ${res.name ?? name} · Aangan`,
+      adminApprovalEmail({
+        kind: "New society proposed",
+        name: res.name ?? name,
+        url: `${site}/admin/societies`,
+      })
+    );
+  }
 
   revalidatePath("/admin/societies");
   return { ok: true, id: res.id, name: res.name, existing: res.existing };

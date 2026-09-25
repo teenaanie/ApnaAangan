@@ -1,0 +1,23 @@
+-- ============================================================================
+-- admin_notify_emails() was reachable by anon.
+--
+-- 0044's `revoke all on function ... from public` did nothing useful here —
+-- REVOKE ... FROM PUBLIC only removes the implicit "everyone" grant, and
+-- anon's ability to call this function was never that: Supabase's default
+-- privileges grant EXECUTE on every new function in `public` to anon,
+-- authenticated and service_role automatically, as an explicit per-role
+-- grant, the moment it's created. That is why the other SECURITY DEFINER
+-- functions in this app (is_admin(), record_settlement(), ...) all show up
+-- callable by anon in the security advisor — it's normal here, and safe for
+-- them, because each checks is_admin()/auth.uid() internally before doing
+-- anything sensitive. admin_notify_emails() does neither: it just returns
+-- the admin email list unconditionally, so anon being able to call it meant
+-- any anonymous visitor could pull every admin's email address straight off
+-- /rest/v1/rpc/admin_notify_emails. Found while verifying 0044 right after
+-- applying it, not from a report — checked with has_function_privilege()
+-- against the live database, not assumed.
+--
+-- Re-runnable.
+-- ============================================================================
+
+revoke execute on function admin_notify_emails() from anon;

@@ -97,21 +97,53 @@ export const RATE_CARD: RateCategory[] = [
     ],
   },
   {
-    slug: "kids",
-    icon: "🎨",
-    label: "Kids & Hobbies",
+    // Was "Kids & Hobbies" — migration 0043 narrowed it to Sports; the
+    // non-sport activities that used to live here (art & craft, drama,
+    // pottery, daycare) moved to Arts & Hobbies below (0046).
+    slug: "sports",
+    icon: "⚽",
+    label: "Sports",
     tier: 3,
-    blurb: "Activities children turn up to week after week.",
+    blurb: "Coaching and training people turn up to week after week.",
+    services: [
+      "Cricket, football, badminton coaching", "Swimming",
+      "Karate, taekwondo, self-defence", "Skating", "Chess coaching",
+      "Tennis and table tennis coaching", "Gymnastics",
+      "Athletics and track coaching", "Kids' yoga",
+      "Summer sports camps and workshops",
+    ],
+    flag:
+      "Academic teaching goes in Classes & Tuition; sport and physical coaching sits here. Both are ₹100, so if you're unsure it makes no difference to what you pay.",
+  },
+  {
+    slug: "arts",
+    icon: "🎨",
+    label: "Arts & Hobbies",
+    tier: 3,
+    blurb: "Activities children — and adults — turn up to week after week.",
     services: [
       "Art and craft", "Bharatanatyam, Kathak, classical dance",
-      "Western and hip-hop dance", "Chess coaching", "Swimming",
-      "Karate, taekwondo, self-defence", "Skating",
-      "Cricket, football, badminton", "Storytelling, drama, theatre",
-      "Pottery and clay", "Kids' yoga", "Daycare and creche",
+      "Western and hip-hop dance", "Storytelling, drama, theatre",
+      "Pottery and clay", "Daycare and creche",
       "Summer camps and workshops", "Birthday hosting for children",
     ],
     flag:
-      "Academic teaching goes in Classes & Tuition; everything else for children sits here. Both are ₹100, so if you're unsure it makes no difference to what you pay.",
+      "Music teaching also fits Classes & Tuition — either is fine, both are ₹100. Sport and physical coaching goes in Sports instead.",
+  },
+  {
+    slug: "clothes",
+    icon: "👗",
+    label: "Clothes & Jewelry",
+    tier: 2,
+    blurb: "Made, altered or repaired for one person, not off a shelf.",
+    services: [
+      "Custom tailoring and boutique design", "Embroidery and zardozi work",
+      "Jewelry making and repair", "Artificial and fashion jewelry",
+      "Bridal and party wear rental", "Fabric painting",
+      "Knitting and crochet", "Bag and footwear customisation",
+    ],
+    flag:
+      "Everyday stitching and alterations — a blouse, a saree fall — stay in Home Services at ₹50. This is for boutique and made-to-order work, which is the same ₹50 rate, so the split is about where a provider is found, not what they pay.",
   },
   {
     slug: "pets",

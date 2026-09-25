@@ -20,15 +20,18 @@ end; $$;
 
 do $$
 declare
-  u_provider uuid := gen_random_uuid();
-  u_resident uuid := gen_random_uuid();
-  u_admin    uuid := gen_random_uuid();
+  u_provider   uuid := gen_random_uuid();
+  u_resident   uuid := gen_random_uuid();
+  u_resident_b uuid := gen_random_uuid();
+  u_admin      uuid := gen_random_uuid();
   loc        uuid;
   prov       uuid;
   cat        uuid;
   lst        uuid;
   lead_id    uuid;
+  lead_a_id  uuid;
   leaked     int;
+  seen       int;
   free_left  int;
   bal        int;
   was_charged boolean;
@@ -75,6 +78,38 @@ begin
     raise exception 'FAIL: admin cannot read contact rows';
   end if;
   raise notice 'PASS: admin reads contact rows';
+
+  -- ------------------------------------------------------- resident isolation ----
+  -- The thing a resident-facing "my bookings" screen would rely on, if one
+  -- existed: leads_read is `resident_id = auth.uid() OR provider_id =
+  -- my_provider_id() OR is_admin()`. Nothing today queries leads as a
+  -- resident, so this is the only proof this policy actually holds.
+  perform set_config('role', 'postgres', false);
+  perform set_config('request.jwt.claim.sub', '', false);
+
+  insert into auth.users (id, email) values (u_resident_b, 'resident-b@test');
+  insert into profiles (id, email, full_name, role) values
+    (u_resident_b, 'resident-b@test', 'Resident B', 'resident')
+    on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
+
+  insert into leads (provider_id, listing_id, resident_id, resident_name,
+                     resident_phone, message)
+    values (prov, lst, u_resident, 'Resident A', '9800000001', 'Customer A''s booking')
+    returning id into lead_a_id;
+
+  perform test_as(u_resident_b);
+  select count(*) into seen from leads where id = lead_a_id;
+  if seen <> 0 then
+    raise exception 'FAIL: resident B could read resident A''s lead';
+  end if;
+  raise notice 'PASS: resident B cannot read resident A''s lead';
+
+  perform test_as(u_resident);
+  select count(*) into seen from leads where id = lead_a_id;
+  if seen <> 1 then
+    raise exception 'FAIL: resident A cannot read their own lead';
+  end if;
+  raise notice 'PASS: resident A reads their own lead';
 
   -- ------------------------------------------------------------ billing ----
   perform set_config('role', 'postgres', false);

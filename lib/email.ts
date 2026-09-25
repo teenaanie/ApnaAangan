@@ -36,7 +36,7 @@ export function emailFrom() {
  * Sends a notification. Without RESEND_API_KEY it logs instead of failing, so
  * local development and the first deploy work with no email setup at all.
  */
-export async function sendMail(opts: { to: string; subject: string; html: string }) {
+export async function sendMail(opts: { to: string | string[]; subject: string; html: string }) {
   if (!resend) {
     console.log(`[email:stub] to=${opts.to} subject=${opts.subject}`);
     return { stubbed: true as const };
@@ -48,6 +48,17 @@ export async function sendMail(opts: { to: string; subject: string; html: string
     console.error("[email:error]", err);
     return { stubbed: false as const, error: true as const };
   }
+}
+
+/**
+ * Notifies every admin on file that something is waiting on them. Silently
+ * does nothing without addresses — the signup or listing that triggered it
+ * has already succeeded by the time this runs, and a missing admin address
+ * is not a reason to fail someone else's request.
+ */
+export async function notifyAdmins(admins: string[] | null | undefined, subject: string, html: string) {
+  if (!admins || admins.length === 0) return;
+  await sendMail({ to: admins, subject, html });
 }
 
 /**
@@ -91,6 +102,32 @@ export function leadEmail(a: {
       You will see ${a.residentName}&rsquo;s phone number as soon as you accept,
       and can message them on WhatsApp with one tap. Nothing is shared before
       that.
+    </p>
+  </div>`;
+}
+
+/**
+ * The admin-approval notification — a new provider, listing, or society is
+ * waiting on a decision. There is no dashboard badge for "since you last
+ * looked"; without this an admin only finds a pending item by remembering
+ * to check /admin.
+ */
+export function adminApprovalEmail(a: {
+  kind: string;
+  name: string;
+  detail?: string;
+  url: string;
+}) {
+  return `
+  <div style="font-family:system-ui,sans-serif;max-width:520px;color:#333433">
+    <p style="color:#7a4900;font-size:18px;margin:0 0 4px"><b>${a.kind}</b></p>
+    <p style="margin:0 0 18px;color:#8b8c88;font-size:13px">Aangan admin</p>
+    <p style="margin:0 0 16px"><b>${a.name}</b> is waiting for a decision.</p>
+    ${a.detail ? `<p style="margin:0 0 16px;color:#555">${a.detail}</p>` : ""}
+    <p style="margin:0 0 22px">
+      <a href="${a.url}" style="background:#c86840;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;display:inline-block">
+        Review in admin
+      </a>
     </p>
   </div>`;
 }
